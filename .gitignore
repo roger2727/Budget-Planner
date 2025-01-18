@@ -2,7 +2,9 @@
 
 # dependencies
 node_modules/
-
+app/config/firebase.js
+app/config/firebase.ts
+google-services.json
 # Expo
 .expo/
 dist/
