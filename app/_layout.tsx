@@ -18,6 +18,7 @@ export default function RootLayout() {
     });
 
     return unsubscribe;
+
   }, []);
 
   if (initializing) return <View />;
@@ -27,21 +28,42 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
+      
         <Stack.Screen name="index" redirect />
+        <Stack.Screen name="Home" />
       </Stack>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: true }}>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen 
-        name="home" 
+        name="Home" 
         options={{
           title: "Budget Planner",
           headerBackVisible: false,
         }} 
       />
-      <Stack.Screen name="index" redirect />
+      <Stack.Screen 
+        name="IncomeScreen" 
+        options={{
+          title: "Income Screen",
+        }} 
+      />
+      <Stack.Screen 
+        name="ExpanseScreen" 
+        options={{
+          title: "Expenses Screen",
+        }} 
+      />
+      <Stack.Screen 
+        name="SummaryScreen" 
+        options={{
+          title: "Summary Screen",
+        }} 
+      />
     </Stack>
   );
+  
+  
 }

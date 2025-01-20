@@ -15,11 +15,24 @@ export default function HomeScreen() {
     }
   };
 
+  const navigateIncomeScreen = async () => {
+    try {
+        router.push('/IncomeScreen');
+    } catch (error: any) {
+        console.error('Navigation error:', error);
+        alert(error.message);
+    }
+};
+
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Hello!</Text>
       <TouchableOpacity style={styles.button} onPress={handleLogout}>
         <Text style={styles.buttonText}>Logout</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={navigateIncomeScreen}>
+        <Text style={styles.buttonText}>START</Text>
       </TouchableOpacity>
     </View>
   );

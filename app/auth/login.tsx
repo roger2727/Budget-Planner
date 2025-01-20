@@ -12,7 +12,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/home');
+      router.replace('/Home');
     } catch (error: any) {
       alert(error.message);
     }

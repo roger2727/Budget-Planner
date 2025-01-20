@@ -19,7 +19,7 @@ export default function Register() {
   
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.replace('/home');
+      router.replace('/Home');
     } catch (error: any) {
       alert(error.message);
     }
