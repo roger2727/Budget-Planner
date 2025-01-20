@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth } from './config/firebase';
+import { auth } from './firebase';
 import { BadgeDollarSign, TrendingUp, TrendingDown } from 'lucide-react-native';
 
 interface IncomeSource {

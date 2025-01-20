@@ -3,7 +3,8 @@ import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-nativ
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { auth } from '../firebase';
+
 
 
 export default function Register() {

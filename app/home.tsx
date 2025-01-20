@@ -2,7 +2,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
-import { auth } from './config/firebase';
+import { auth } from './firebase';
 
 export default function HomeScreen() {
   const handleLogout = async () => {

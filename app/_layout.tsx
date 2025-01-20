@@ -2,9 +2,11 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './config/firebase';
+
 import React from 'react';
 import { View } from 'react-native';
+import { auth } from './firebase';
+
 
 
 export default function RootLayout() {

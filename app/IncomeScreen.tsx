@@ -4,7 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import { Trash2,  BadgeDollarSign } from 'lucide-react-native';
 import { router } from 'expo-router';
 
-import { auth } from './config/firebase';
+import { auth } from './firebase';
 import { 
   doc, 
   collection, 

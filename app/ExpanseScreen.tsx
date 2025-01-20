@@ -13,7 +13,8 @@ import {
   where,
   getFirestore 
 } from 'firebase/firestore';
-import { auth } from './config/firebase';
+import { auth } from './firebase';
+
 
 interface ExpenseSource {
   id: string;
