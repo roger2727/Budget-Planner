@@ -1,8 +1,10 @@
 // app/home.tsx
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
+import NavBar from '../components/NavBar';
 
 export default function HomeScreen() {
   const handleLogout = async () => {
@@ -17,29 +19,34 @@ export default function HomeScreen() {
 
   const navigateIncomeScreen = async () => {
     try {
-        router.push('/IncomeScreen');
+      router.push('/IncomeScreen');
     } catch (error: any) {
-        console.error('Navigation error:', error);
-        alert(error.message);
+      console.error('Navigation error:', error);
+      alert(error.message);
     }
-};
-
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Hello!</Text>
-      <TouchableOpacity style={styles.button} onPress={handleLogout}>
-        <Text style={styles.buttonText}>Logout</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={navigateIncomeScreen}>
-        <Text style={styles.buttonText}>START</Text>
-      </TouchableOpacity>
+      <View style={styles.content}>
+        <Text style={styles.title}>Hello!</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogout}>
+          <Text style={styles.buttonText}>Logout</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={navigateIncomeScreen}>
+          <Text style={styles.buttonText}>START</Text>
+        </TouchableOpacity>
+      </View>
+      <NavBar />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -55,6 +62,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
+    marginVertical: 10,
   },
   buttonText: {
     color: '#fff',

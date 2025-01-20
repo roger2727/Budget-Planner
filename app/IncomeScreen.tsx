@@ -1,77 +1,204 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Trash2,  BadgeDollarSign } from 'lucide-react-native';
-import { router } from 'expo-router';
-
+import { Trash2, BadgeDollarSign, PenIcon } from 'lucide-react-native';
+import NavBar from '../components/NavBar';
+import FormModal from '../components/FormModal';
 import { auth } from './firebase';
 import { 
-  doc, 
-  collection, 
-  addDoc, 
-  deleteDoc, 
-  getDocs, 
-  query, 
-  where,
-  getFirestore 
+  doc, collection, addDoc, deleteDoc, getDocs, 
+  query, where, getFirestore, updateDoc 
 } from 'firebase/firestore';
 
+const DEFAULT_INCOME_ITEMS = [
+  {
+    category: "Employment",
+    items: [
+      { name: "Salary", amount: 0, frequency: "fortnightly" },
+      { name: "Wages", amount: 0, frequency: "weekly" },
+      { name: "Overtime", amount: 0, frequency: "fortnightly" },
+      { name: "Bonuses", amount: 0, frequency: "annually" },
+
+    ]
+  },
+  {
+    category: "Investments",
+    items: [
+
+      { name: "Rental Income", amount: 0, frequency: "monthly" },
+   
+    ]
+  },
+  {
+    category: "Government Benefits",
+    items: [
+      { name: "Family Tax Benefit", amount: 0, frequency: "fortnightly" },
+      { name: "JobSeeker", amount: 0, frequency: "fortnightly" },
+      { name: "OOHC payment", amount: 0, frequency: "fortnightly" }
+    ]
+  },
+  {
+    category: "Business",
+    items: [
+  
+      { name: "Freelance Income", amount: 0, frequency: "monthly" }
+    ]
+  }
+];
+
 interface IncomeSource {
   id: string;
   name: string;
-  frequency: 'weekly' | 'fortnightly' | 'monthly' | 'annually';
-  amount: number;
-  userId: string; // Add userId to track which user the income belongs to
-}
-type FrequencyColorMap = {
-  [K in IncomeSource['frequency']]: string;
-};
-
-const FREQUENCY_COLORS: FrequencyColorMap = {
-  weekly: '#e3f2fd',    // Light Blue
-  fortnightly: '#e8f5e9', // Light Green
-  monthly: '#fff3e0',    // Light Orange
-  annually: '#f3e5f5',   // Light Purple
-};
-
-
-interface IncomeSource {
-  id: string;
-  name: string;
-  frequency: 'weekly' | 'fortnightly' | 'monthly' | 'annually';
+  frequency: 'weekly' | 'fortnightly' | 'monthly' | 'annually' | 'quarterly';
   amount: number;
   userId: string;
+  isDefault: boolean;
+  category: string;
 }
 
-
-
-type GroupedIncomeSources = {
-  [K in IncomeSource['frequency']]: IncomeSource[];
-};
 const IncomeForm = () => {
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
   const [newIncomeName, setNewIncomeName] = useState('');
   const [newIncomeFrequency, setNewIncomeFrequency] = useState<IncomeSource['frequency']>('weekly');
   const [newIncomeAmount, setNewIncomeAmount] = useState(0);
-  const [incomeViewMode, setIncomeViewMode] = useState<'weekly' | 'monthly' | 'annual'>('annual');
+  const [incomeViewMode, setIncomeViewMode] = useState<'weekly' | 'monthly' | 'annual' | 'quarterly'>('annual');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const handleCloseModal = () => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const db = useMemo(() => getFirestore(), []); // Memoize db instance
+  const userId = auth.currentUser?.uid;
+
+  // Memoize calculations for different income periods
+  const incomeCalculations = useMemo(() => {
+    const weekly = incomeSources.reduce((total, source) => 
+      total + (source.amount / (source.frequency === 'weekly' ? 1 : 
+        source.frequency === 'fortnightly' ? 2 : 
+        source.frequency === 'monthly' ? 4 : 52)), 0);
+
+    const monthly = incomeSources.reduce((total, source) => 
+      total + (source.amount / (source.frequency === 'monthly' ? 1 : 
+        source.frequency === 'fortnightly' ? 0.5 : 
+        source.frequency === 'annually' ? 12 : 4)), 0);
+
+    const annual = incomeSources.reduce((total, source) => 
+      total + (source.amount * (source.frequency === 'annually' ? 1 : 
+        source.frequency === 'fortnightly' ? 26 : 
+        source.frequency === 'monthly' ? 12 : 52)), 0);
+
+    const quarterly = incomeSources.reduce((total, source) => 
+      total + (source.amount / (source.frequency === 'quarterly' ? 1 : 
+        source.frequency === 'monthly' ? 3 : 4)), 0);
+
+    return { weekly, monthly, annual, quarterly };
+  }, [incomeSources]); // Only recalculate when incomeSources changes
+
+  // Memoize displayed income based on view mode and calculations
+  const displayedIncome = useMemo(() => {
+    switch(incomeViewMode) {
+      case 'weekly': return incomeCalculations.weekly;
+      case 'monthly': return incomeCalculations.monthly;
+      case 'quarterly': return incomeCalculations.quarterly;
+      default: return incomeCalculations.annual;
+    }
+  }, [incomeViewMode, incomeCalculations]);
+
+  // Memoize grouped sources for rendering
+  const groupedSources = useMemo(() => {
+    const grouped: { [key: string]: IncomeSource[] } = {};
+
+    incomeSources.forEach(source => {
+      const category = DEFAULT_INCOME_ITEMS.find(item => 
+        item.items.some(i => i.name === source.name)
+      )?.category;
+
+      if (category) {
+        if (!grouped[category]) {
+          grouped[category] = [];
+        }
+        grouped[category].push(source);
+      }
+    });
+
+    const otherSources = incomeSources.filter(source => 
+      !DEFAULT_INCOME_ITEMS.some(item => 
+        item.items.some(i => i.name === source.name)
+      )
+    );
+    
+    if (otherSources.length > 0) {
+      grouped["Other"] = otherSources;
+    }
+
+    return grouped;
+  }, [incomeSources]);
+
+  // Memoize callbacks
+  const handleEdit = useCallback((source: IncomeSource) => {
+    setIsEditing(true);
+    setEditingId(source.id);
+    setNewIncomeName(source.name);
+    setNewIncomeFrequency(source.frequency);
+    setNewIncomeAmount(source.amount);
+    setIsModalVisible(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
     setIsModalVisible(false);
+    setIsEditing(false);
+    setEditingId(null);
     setNewIncomeName('');
     setNewIncomeFrequency('weekly');
     setNewIncomeAmount(0);
-  };
-  const db = getFirestore();
-  const userId = auth.currentUser?.uid;
+  }, []);
 
-  // Fetch income sources when component mounts
-  useEffect(() => {
-    if (userId) {
-      fetchIncomeSources();
+  const removeIncomeSource = useCallback(async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'incomeSources', id));
+      setIncomeSources(prevSources => prevSources.filter((source) => source.id !== id));
+    } catch (error: any) {
+      console.error('Error removing income source:', error);
+      alert('Error removing income source');
     }
-  }, [userId]);
+  }, [db]);
 
-  const fetchIncomeSources = async () => {
+  const handleSave = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      const category = DEFAULT_INCOME_ITEMS.find(item =>
+        item.items.some(i => i.name === newIncomeName)
+      )?.category;
+
+      const incomeData = {
+        name: newIncomeName,
+        frequency: newIncomeFrequency,
+        amount: newIncomeAmount,
+        userId: userId,
+        isDefault: false,
+        category: category || 'Other',
+      };
+
+      if (isEditing && editingId) {
+        await updateDoc(doc(db, 'incomeSources', editingId), incomeData);
+        setIncomeSources(prevSources => prevSources.map(source =>
+          source.id === editingId ? { ...incomeData, id: editingId } : source
+        ));
+      } else {
+        const docRef = await addDoc(collection(db, 'incomeSources'), incomeData);
+        await fetchIncomeSources();
+      }
+      handleCloseModal();
+    } catch (error: any) {
+      console.error('Error saving income source:', error);
+      alert('Error saving income source: ' + error.message);
+    }
+  }, [db, userId, newIncomeName, newIncomeFrequency, newIncomeAmount, isEditing, editingId, handleCloseModal]);
+
+  // Memoize the fetch function
+  const fetchIncomeSources = useCallback(async () => {
+    if (!userId) return;
+    
     try {
       const q = query(
         collection(db, 'incomeSources'),
@@ -90,93 +217,66 @@ const IncomeForm = () => {
       console.error('Error fetching income sources:', error);
       alert('Error loading income sources');
     }
-  };
+  }, [db, userId]);
 
-  const addIncomeSource = async () => {
+  // Initialize default income sources
+  const initializeDefaultIncome = useCallback(async () => {
     if (!userId) return;
-  
+
     try {
-      const newIncomeData = {
-        name: newIncomeName,
-        frequency: newIncomeFrequency,
-        amount: newIncomeAmount,
-        userId: userId,
-      };
-  
-      const docRef = await addDoc(collection(db, 'incomeSources'), newIncomeData);
+      const q = query(
+        collection(db, 'incomeSources'),
+        where('userId', '==', userId)
+      );
       
-      setIncomeSources([...incomeSources, { id: docRef.id, ...newIncomeData }]);
-      handleCloseModal(); // Close modal after adding
-    } catch (error: any) {
-      console.error('Error adding income source:', error);
-      alert('Error adding income source');
+      const querySnapshot = await getDocs(q);
+      const existingItems = querySnapshot.docs.reduce((map, doc) => {
+        const data = doc.data();
+        map.set(data.name, { id: doc.id, isDefault: data.isDefault });
+        return map;
+      }, new Map());
+
+      // Add missing default items
+      for (const category of DEFAULT_INCOME_ITEMS) {
+        for (const item of category.items) {
+          if (!existingItems.has(item.name)) {
+            await addDoc(collection(db, 'incomeSources'), {
+              ...item,
+              userId,
+              isDefault: true,
+              category: category.category,
+            });
+          }
+        }
+      }
+
+      await fetchIncomeSources();
+    } catch (error) {
+      console.error('Error initializing default income:', error);
     }
-  };
+  }, [db, userId, fetchIncomeSources]);
 
-  const removeIncomeSource = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'incomeSources', id));
-      setIncomeSources(incomeSources.filter((source) => source.id !== id));
-    } catch (error: any) {
-      console.error('Error removing income source:', error);
-      alert('Error removing income source');
+  useEffect(() => {
+    if (userId) {
+      initializeDefaultIncome();
     }
-  };
-  const totalIncome = incomeSources.reduce((total, source) => total + source.amount, 0);
-  const weeklyIncome = incomeSources.reduce((total, source) => total + (source.amount / (source.frequency === 'weekly' ? 1 : source.frequency === 'fortnightly' ? 2 : source.frequency === 'monthly' ? 4 : 52)), 0);
-  const monthlyIncome = incomeSources.reduce((total, source) => total + (source.amount / (source.frequency === 'monthly' ? 1 : source.frequency === 'fortnightly' ? 0.5 : source.frequency === 'annually' ? 12 : 4)), 0);
-  const annualIncome = incomeSources.reduce((total, source) => total + (source.amount * (source.frequency === 'annually' ? 1 : source.frequency === 'fortnightly' ? 26 : source.frequency === 'monthly' ? 12 : 52)), 0);
+  }, [userId, initializeDefaultIncome]);
 
-  let displayedIncome = annualIncome;
-  if (incomeViewMode === 'weekly') {
-    displayedIncome = weeklyIncome;
-  } else if (incomeViewMode === 'monthly') {
-    displayedIncome = monthlyIncome;
-  }
+  // Memoize the render function for income sources
+  const renderGroupedIncomeSources = useCallback(() => {
+    return Object.entries(groupedSources).map(([category, sources]) => (
+      <View key={category}>
+        <View style={styles.categoryHeader}>
+          <Text style={styles.categoryHeaderText}>{category}</Text>
+        </View>
 
-  const groupIncomeSourcesByFrequency = (sources: IncomeSource[]): GroupedIncomeSources => {
-    const grouped: GroupedIncomeSources = {
-      weekly: [],
-      fortnightly: [],
-      monthly: [],
-      annually: []
-    };
-  
-    sources.forEach(source => {
-      grouped[source.frequency].push(source);
-    });
-  
-    return grouped;
-  };
-  
-  // Replace your existing income sources mapping with this:
-  const renderGroupedIncomeSources = () => {
-    const groupedSources = groupIncomeSourcesByFrequency(incomeSources);
-    
-    // Define the order you want to display the groups
-    const frequencyOrder: IncomeSource['frequency'][] = ['weekly', 'fortnightly', 'monthly', 'annually'];
-    
-    return frequencyOrder.map(frequency => {
-      const sources = groupedSources[frequency];
-      if (sources.length === 0) return null;
-  
-      return (
-        <View key={frequency}>
-          <View style={styles.frequencyHeader}>
-            <View style={[styles.frequencyIndicator, { backgroundColor: FREQUENCY_COLORS[frequency] }]} />
-            <Text style={styles.frequencyHeaderText}>
-              {frequency.charAt(0).toUpperCase() + frequency.slice(1)} Income
-            </Text>
-          </View>
-  
-          {sources.map((source: IncomeSource) => (
-            <View key={source.id} style={styles.incomeItemWrapper}>
-              <View 
-                style={[
-                  styles.incomeItemContainer, 
-                  { backgroundColor: FREQUENCY_COLORS[source.frequency] }
-                ]}
-              >
+        {sources.map(source => (
+          <View key={source.id} style={styles.incomeItemWrapper}>
+            <TouchableOpacity 
+              style={styles.itemTouchable}
+              onPress={() => handleEdit(source)}
+            >
+              <View style={styles.incomeItemContainer}>
                 <View style={styles.incomeItem}>
                   <Text style={styles.incomeItemName}>{source.name}</Text>
                   <View style={styles.incomeItemRight}>
@@ -185,130 +285,121 @@ const IncomeForm = () => {
                   </View>
                 </View>
               </View>
-              <TouchableOpacity 
-                style={styles.deleteButton} 
-                onPress={() => removeIncomeSource(source.id)}
-              >
-                <Trash2 color="white" size={18} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      );
-    });
-  };
-  
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.editButton} 
+              onPress={() => handleEdit(source)}
+            >
+              <PenIcon color="white" size={18} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.deleteButton} 
+              onPress={() => removeIncomeSource(source.id)}
+            >
+              <Trash2 color="white" size={18} />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    ));
+  }, [groupedSources, handleEdit, removeIncomeSource]);
 
   return (
     <View style={styles.container}>
-        <ScrollView style={styles.scrollView}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Income</Text>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Income</Text>
+          {renderGroupedIncomeSources()}
+          
+          <View style={styles.addButtonContainer}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => setIsModalVisible(true)}
+            >
+              <Text style={styles.addButtonText}>Add Income</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={newStyles.addButtonContainer}>
-  <TouchableOpacity 
-    style={newStyles.addButton}
-    onPress={() => setIsModalVisible(true)}
-  >
-    <Text style={newStyles.addButtonText}>Add Income</Text>
-  </TouchableOpacity>
-</View>
-
-<Modal
-  visible={isModalVisible}
-  transparent={true}
-  animationType="slide"
-  onRequestClose={handleCloseModal}
->
-  <View style={newStyles.modalOverlay}>
-    <View style={newStyles.modalContent}>
-      <View style={newStyles.modalHeader}>
-        <Text style={newStyles.modalTitle}>Add New Income</Text>
-        <TouchableOpacity onPress={handleCloseModal}>
-          <Text style={newStyles.closeButton}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Income Source"
-        value={newIncomeName}
-        onChangeText={setNewIncomeName}
-      />
-      
-      <Picker
-        style={styles.picker}
-        selectedValue={newIncomeFrequency}
-        onValueChange={(value) => setNewIncomeFrequency(value as IncomeSource['frequency'])}
-      >
-        <Picker.Item label="Weekly" value="weekly" />
-        <Picker.Item label="Fortnightly" value="fortnightly" />
-        <Picker.Item label="Monthly" value="monthly" />
-        <Picker.Item label="Annually" value="annually" />
-      </Picker>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Amount"
-        keyboardType="numeric"
-        value={newIncomeAmount.toString()}
-        onChangeText={(text) => setNewIncomeAmount(parseFloat(text) || 0)}
-      />
-
-      <View style={newStyles.modalButtons}>
-        <TouchableOpacity 
-          style={[styles.button, newStyles.cancelButton]}
-          onPress={handleCloseModal}
-        >
-          <Text style={newStyles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, newStyles.saveButton]}
-          onPress={addIncomeSource}
-        >
-          <Text style={newStyles.saveButtonText}>Save</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
-
-      {renderGroupedIncomeSources()}
-        <View style={styles.totals}>
-          <Picker
-            style={styles.picker}
-            selectedValue={incomeViewMode}
-            onValueChange={(value) => setIncomeViewMode(value as 'weekly' | 'monthly' | 'annual')}
-          >
-            <Picker.Item label="Weekly" value="weekly" />
-            <Picker.Item label="Monthly" value="monthly" />
-            <Picker.Item label="Annual" value="annual" />
-          </Picker>
-          <Text style={styles.totalLabel}>Total {incomeViewMode === 'weekly' ? 'Weekly' : incomeViewMode === 'monthly' ? 'Monthly' : 'Annual'} Income:</Text>
-          <Text style={styles.totalAmount}>${displayedIncome.toFixed(2)}</Text>
+          <View style={styles.totals}>
+            <Picker
+              style={styles.picker}
+              selectedValue={incomeViewMode}
+              onValueChange={(value) => setIncomeViewMode(value as 'weekly' | 'monthly' | 'annual' | 'quarterly')}
+            >
+              <Picker.Item label="Weekly" value="weekly" />
+              <Picker.Item label="Monthly" value="monthly" />
+              <Picker.Item label="Annual" value="annual" />
+              <Picker.Item label="Quarterly" value="quarterly" />
+            </Picker>
+            <Text style={styles.totalLabel}>
+              Total {incomeViewMode === 'weekly' ? 'Weekly' : incomeViewMode === 'monthly' ? 'Monthly' : 'Annual'} Income:
+            </Text>
+            <Text style={[styles.totalAmount, { color: 'green' }]}>
+              ${displayedIncome.toFixed(2)}
+            </Text>
+          </View>
         </View>
-      </View>
       </ScrollView>
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/Home')}>
-          <Text style={styles.navButtonText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/IncomeScreen')}>
-          <Text style={styles.navButtonText}>Income</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/ExpanseScreen')}>
-          <Text style={styles.navButtonText}>Expenses</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/SummaryScreen')}>
-          <Text style={styles.navButtonText}>Summary</Text>
-        </TouchableOpacity>
-      </View>
- 
+      
+      <NavBar />
+      <FormModal
+        visible={isModalVisible}
+        isEditing={isEditing}
+        itemName={newIncomeName}
+        frequency={newIncomeFrequency}
+        amount={newIncomeAmount}
+        type="Income"
+        onClose={handleCloseModal}
+        onSave={handleSave}
+        onChangeName={setNewIncomeName}
+        onChangeFrequency={setNewIncomeFrequency}
+        onChangeAmount={(text) => setNewIncomeAmount(parseFloat(text) || 0)}
+      />
     </View>
   );
 };
-const newStyles  = StyleSheet.create({
+
+const styles = StyleSheet.create({
+  // Container and Layout
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  itemTouchable: {
+    flex: 1,  // This ensures it takes up all available space
+  },
+  // Title and Headers
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  frequencyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  frequencyHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  frequencyIndicator: {
+    width: 4,
+    height: 20,
+    borderRadius: 2,
+    marginRight: 8,
+  },
+
+  // Add Button
   addButtonContainer: {
     marginBottom: 20,
   },
@@ -323,38 +414,77 @@ const newStyles  = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  modalOverlay: {
+
+  // Income Items
+  incomeItemWrapper: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginBottom: 15,
+  },
+  incomeItemContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: '#f2f2f2',
+    padding: 10,
+    borderTopLeftRadius: 5,
+    borderBottomLeftRadius: 5,
+  },
+  incomeItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  incomeItemName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 6,
+    flexWrap: 'wrap',
+  },
+  incomeItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    minWidth: 90,
+  },
+  incomeItemText: {
+    fontSize: 14,
+    marginHorizontal: 5,
+  },
+
+  // Delete Button
+  deleteButton: {
+    backgroundColor: 'red',
+    borderTopRightRadius: 5,
+    borderBottomRightRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
+    width: 40,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
+
+  // Modal Styles
+ 
+
+  // Form Elements
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+  picker: {
+    marginBottom: 10,
   },
-  modalTitle: {
-    fontSize: 18,
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#fff',
     fontWeight: 'bold',
-  },
-  closeButton: {
-    fontSize: 24,
-    color: '#999',
-    padding: 5,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
+    textAlign: 'center',
   },
   cancelButton: {
     backgroundColor: '#f2f2f2',
@@ -376,97 +506,8 @@ const newStyles  = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-}
-);
 
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  incomeItemWrapper: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginBottom: 15,
-  },
-  incomeItemContainer: {
-    flex: 1,
-    backgroundColor: '#f2f2f2',
-    padding: 10,
-    borderTopLeftRadius: 5,
-    borderBottomLeftRadius: 5,
-  },
-  incomeItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from 'center' to 'flex-start'
-    justifyContent: 'space-between',
-    flexWrap: 'wrap', // Added to allow wrapping
-  },
-  incomeItemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1, // Added to allow proper space distribution
-    marginRight: 6, // Added to maintain spacing from the right side content
-    flexWrap: 'wrap', // Added to ensure text wraps
-  },  
-  incomeItemRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 0, // Added to prevent the right side from shrinking
-    minWidth: 90, // Added to ensure minimum width for the right side content
-  },
-  incomeItemText: {
-    fontSize: 14,
-    marginHorizontal: 5,
-  },
-  deleteIcon: {
-    padding: 5,
-    backgroundColor: 'red',
-  },
-  deleteButton: {
-    backgroundColor: 'red',
-    borderTopRightRadius: 5,
-    borderBottomRightRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 40,
-  },
-  newIncomeContainer: {
-    backgroundColor: '#f2f2f2',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-  },
-  picker: {
-    marginBottom: 10,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+  // Totals Section
   totals: {
     marginTop: 20,
   },
@@ -479,24 +520,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 10,
   },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    backgroundColor: '#fff',
-  },
-  navButton: {
-    paddingVertical: 10,
-  },
-  navButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
+
+  // Legend
   legendContainer: {
     backgroundColor: '#fff',
     padding: 10,
@@ -531,26 +556,24 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
   },
-  frequencyHeader: {
-    flexDirection: 'row',
+  editButton: {
+    backgroundColor: '#4CAF50', // Green color
+    justifyContent: 'center',
     alignItems: 'center',
+    width: 40,
+  },
+  categoryHeader: {
     paddingVertical: 10,
     marginBottom: 10,
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 15,
+    borderRadius: 5,
   },
-  frequencyHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
+  categoryHeaderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#333',
   },
-  frequencyIndicator: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  
- 
-
 });
 
 export default IncomeForm;

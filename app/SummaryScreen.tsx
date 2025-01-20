@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth } from './firebase';
 import { BadgeDollarSign, TrendingUp, TrendingDown } from 'lucide-react-native';
+import NavBar from '@/components/NavBar';
 
 interface IncomeSource {
   id: string;
@@ -164,20 +165,7 @@ const SummaryScreen = () => {
         </View>
       </ScrollView>
 
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/Home')}>
-          <Text style={styles.navButtonText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/IncomeScreen')}>
-          <Text style={styles.navButtonText}>Income</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/ExpanseScreen')}>
-          <Text style={styles.navButtonText}>Expenses</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/SummaryScreen')}>
-          <Text style={styles.navButtonText}>Summary</Text>
-        </TouchableOpacity>
-      </View>
+      <NavBar />
     </View>
   );
 };
@@ -255,21 +243,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    backgroundColor: '#fff',
-  },
-  navButton: {
-    paddingVertical: 10,
-  },
-  navButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
+ 
 });
 
 export default SummaryScreen;
