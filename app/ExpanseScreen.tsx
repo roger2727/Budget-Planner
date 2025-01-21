@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Trash2, BadgeDollarSign, PenIcon } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+
 import { 
   doc, 
   collection, 
@@ -350,7 +351,7 @@ const ExpenseScreen = () => {
                 <View style={styles.expenseItem}>
                   <Text style={styles.expenseItemName}>{source.name}</Text>
                   <View style={styles.expenseItemRight}>
-                    <BadgeDollarSign color="red" size={18} />
+                 <Icon name='dollar' color="green" size={18} />
                     <Text style={styles.expenseItemText}>{source.amount.toFixed(2)}</Text>
                   </View>
                 </View>
@@ -360,13 +361,13 @@ const ExpenseScreen = () => {
               style={styles.editButton} 
               onPress={() => handleEdit(source)}
             >
-              <PenIcon color="white" size={18} />
+          <Icon name='pencil' color="white" size={25} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.deleteButton} 
               onPress={() => removeExpenseSource(source.id)}
             >
-              <Trash2 color="white" size={18} />
+            <Icon name='trash' color="white" size={25} />
             </TouchableOpacity>
           </View>
         ))}

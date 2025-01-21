@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Trash2, BadgeDollarSign, PenIcon } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+
 import NavBar from '../components/NavBar';
 import FormModal from '../components/FormModal';
 import { auth } from './firebase';
@@ -280,7 +281,7 @@ const IncomeForm = () => {
                 <View style={styles.incomeItem}>
                   <Text style={styles.incomeItemName}>{source.name}</Text>
                   <View style={styles.incomeItemRight}>
-                    <BadgeDollarSign color="green" size={18} />
+                    <Icon name='dollar' color="green" size={18} />
                     <Text style={styles.incomeItemText}>{source.amount.toFixed(2)}</Text>
                   </View>
                 </View>
@@ -290,13 +291,13 @@ const IncomeForm = () => {
               style={styles.editButton} 
               onPress={() => handleEdit(source)}
             >
-              <PenIcon color="white" size={18} />
+                 <Icon name='pencil' color="white" size={25} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.deleteButton} 
               onPress={() => removeIncomeSource(source.id)}
             >
-              <Trash2 color="white" size={18} />
+           <Icon name='trash' color="white" size={25} />
             </TouchableOpacity>
           </View>
         ))}

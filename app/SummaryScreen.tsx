@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { router } from 'expo-router';
+
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth } from './firebase';
-import { BadgeDollarSign, TrendingUp, TrendingDown } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import NavBar from '@/components/NavBar';
 
 interface IncomeSource {
@@ -132,7 +132,7 @@ const SummaryScreen = () => {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <View style={styles.iconContainer}>
-                <TrendingUp color="green" size={24} />
+                      <Icon name='arrow-up' color="green" size={25} />
               </View>
               <Text style={styles.summaryLabel}>Total Income</Text>
               <Text style={[styles.summaryAmount, { color: 'green' }]}>
@@ -144,7 +144,7 @@ const SummaryScreen = () => {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <View style={styles.iconContainer}>
-                <TrendingDown color="red" size={24} />
+              <Icon name='arrow-down' color="red" size={25} />
               </View>
               <Text style={styles.summaryLabel}>Total Expenses</Text>
               <Text style={[styles.summaryAmount, { color: 'red' }]}>
@@ -154,7 +154,8 @@ const SummaryScreen = () => {
           </View>
 
           <View style={[styles.balanceContainer, { backgroundColor: balance >= 0 ? '#e8f5e9' : '#ffebee' }]}>
-            <BadgeDollarSign color={balance >= 0 ? 'green' : 'red'} size={24} />
+          <Icon name='dollar' color={balance >= 0 ? 'green' : 'red'} size={25} />
+         
             <Text style={styles.balanceLabel}>
               {balance >= 0 ? 'Surplus' : 'Deficit'}
             </Text>
