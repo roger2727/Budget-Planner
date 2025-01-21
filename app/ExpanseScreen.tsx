@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { DEFAULT_SPENDING_ITEMS } from '../constants/defaultItems/defaultSpendingItems';
 
 import { 
   doc, 
@@ -17,93 +18,7 @@ import {
 import { auth } from './firebase';
 import NavBar from '@/components/NavBar';
 import FormModal from '../components/FormModal';
-const DEFAULT_SPENDING_ITEMS = [
-  {
-    category: "Housing",
-    items: [
-      { name: "Mortgage & rent", amount: 0, frequency: "monthly" },
-      { name: "Council rates", amount: 0, frequency: "quarterly" },
-      { name: "Electricity", amount: 0, frequency: "quarterly" },
-      { name: "Gas", amount: 0, frequency: "quarterly" },
-      { name: "Water", amount: 0, frequency: "quarterly" },
-      { name: "Internet / mobile plans", amount: 0, frequency: "monthly" },
-      { name: "Pay TV", amount: 0, frequency: "monthly" },
-      { name: "Pest control", amount: 0, frequency: "annually" }
-    ]
-  },
-  {
-    category: "Insurance",
-    items: [
-      { name: "Car insurance", amount: 0, frequency: "annually" },
-      { name: "Home & contents insurance", amount: 0, frequency: "annually" },
-      { name: "Personal & life insurance", amount: 0, frequency: "annually" },
-      { name: "Health insurance", amount: 0, frequency: "monthly" }
-    ]
-  },
-  {
-    category: "Financial",
-    items: [
-      { name: "Car loan", amount: 0, frequency: "monthly" },
-      { name: "Help debt", amount: 0, frequency: "fortnightly" },
-      { name: "Savings", amount: 0, frequency: "weekly" },
-      { name: "Investment Fund", amount: 0, frequency: "monthly" }
-    ]
-  },
-  {
-    category: "Food & Groceries",
-    items: [
-      { name: "Supermarket", amount: 0, frequency: "weekly" },
-      { name: "Coffee", amount: 0, frequency: "weekly" },
-      { name: "Lunches bought", amount: 0, frequency: "weekly" },
-      { name: "Take-away & snacks", amount: 0, frequency: "weekly" },
-      { name: "Restaurants", amount: 0, frequency: "monthly" }
-    ]
-  },
-  {
-    category: "Personal & Medical",
-    items: [
-      { name: "Hair & beauty", amount: 0, frequency: "monthly" },
-      { name: "Medicines & pharmacy", amount: 0, frequency: "monthly" },
-      { name: "Dental", amount: 0, frequency: "annually" },
-      { name: "Doctors & medical", amount: 0, frequency: "monthly" },
-      { name: "Clothing & shoes", amount: 0, frequency: "monthly" },
-      { name: "Computers & gadgets", amount: 0, frequency: "monthly" },
-      { name: "Sports & gym", amount: 0, frequency: "monthly" },
-      { name: "Education", amount: 0, frequency: "annually" },
-      { name: "Pet care & vet", amount: 0, frequency: "monthly" }
-    ]
-  },
-  {
-    category: "Entertainment",
-    items: [
-      { name: "Back Then App", amount: 0, frequency: "monthly" },
-      { name: "Books", amount: 0, frequency: "monthly" },
-      { name: "Movies & music (Spotify)", amount: 0, frequency: "monthly" },
-      { name: "Holidays", amount: 0, frequency: "annually" },
-      { name: "Celebrations & gifts", amount: 0, frequency: "monthly" }
-    ]
-  },
-  {
-    category: "Transport",
-    items: [
-      { name: "Bus & train & ferry", amount: 0, frequency: "weekly" },
-      { name: "Petrol", amount: 0, frequency: "weekly" },
-      { name: "Road tolls & parking", amount: 0, frequency: "weekly" },
-      { name: "Rego & licence", amount: 0, frequency: "annually" },
-      { name: "Repairs & maintenance", amount: 0, frequency: "monthly" }
-    ]
-  },
-  {
-    category: "Children",
-    items: [
-      { name: "Toys", amount: 0, frequency: "weekly" },
-      { name: "Childcare (oosh)", amount: 0, frequency: "weekly" },
-  
-      { name: "School supplies", amount: 0, frequency: "annually" },
-      { name: "Pocket money", amount: 0, frequency: "weekly" }
-    ]
-  }
-];
+
 
 interface ExpenseSource {
   id: string;
@@ -140,11 +55,17 @@ const ExpenseScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('Other');
 
-  const db = useMemo(() => getFirestore(), []); // Memoize db instance
+  const db = useMemo(() => getFirestore(), []);
   const userId = auth.currentUser?.uid;
 
-  // Memoize expense calculations
+  const categories = useMemo(() => {
+    const cats = DEFAULT_SPENDING_ITEMS.map(item => item.category);
+    return [...new Set([...cats, 'Other'])];
+  }, []);
+
+  // Expense calculations
   const expenseCalculations = useMemo(() => {
     const weekly = expenseSources.reduce((total, source) => 
       total + (source.amount / (source.frequency === 'weekly' ? 1 : 
@@ -168,7 +89,6 @@ const ExpenseScreen = () => {
     return { weekly, monthly, annual, quarterly };
   }, [expenseSources]);
 
-  // Memoize displayed expense based on view mode
   const displayedExpense = useMemo(() => {
     switch(expenseViewMode) {
       case 'weekly': return expenseCalculations.weekly;
@@ -177,43 +97,40 @@ const ExpenseScreen = () => {
     }
   }, [expenseViewMode, expenseCalculations]);
 
-  // Memoize grouped sources for rendering
   const groupedSources = useMemo(() => {
     const grouped: { [key: string]: ExpenseSource[] } = {};
-  
+
+    // Initialize all categories
+    categories.forEach(category => {
+      grouped[category] = [];
+    });
+
+    // Group sources by their saved category
     expenseSources.forEach(source => {
-      const category = DEFAULT_SPENDING_ITEMS.find(item => 
-        item.items.some(i => i.name === source.name)
-      )?.category;
-  
-      if (category) {
-        if (!grouped[category]) {
-          grouped[category] = [];
-        }
-        grouped[category].push(source);
+      const category = source.category || 'Other';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(source);
+    });
+
+    // Remove empty categories
+    Object.keys(grouped).forEach(key => {
+      if (grouped[key].length === 0) {
+        delete grouped[key];
       }
     });
 
-    const otherSources = expenseSources.filter(source => 
-      !DEFAULT_SPENDING_ITEMS.some(item => 
-        item.items.some(i => i.name === source.name)
-      )
-    );
-    
-    if (otherSources.length > 0) {
-      grouped["Other"] = otherSources;
-    }
-
     return grouped;
-  }, [expenseSources]);
+  }, [expenseSources, categories]);
 
-  // Memoize callbacks
   const handleEdit = useCallback((source: ExpenseSource) => {
     setIsEditing(true);
     setEditingId(source.id);
     setNewExpenseName(source.name);
     setNewExpenseFrequency(source.frequency);
     setNewExpenseAmount(source.amount);
+    setSelectedCategory(source.category);
     setIsModalVisible(true);
   }, []);
 
@@ -224,6 +141,7 @@ const ExpenseScreen = () => {
     setNewExpenseName('');
     setNewExpenseFrequency('weekly');
     setNewExpenseAmount(0);
+    setSelectedCategory('Other');
   }, []);
 
   const removeExpenseSource = useCallback(async (id: string) => {
@@ -235,40 +153,6 @@ const ExpenseScreen = () => {
       alert('Error removing expense source');
     }
   }, [db]);
-
-  const handleSave = useCallback(async () => {
-    if (!userId) return;
-  
-    try {
-      const category = DEFAULT_SPENDING_ITEMS.find(item =>
-        item.items.some(i => i.name === newExpenseName)
-      )?.category;
-  
-      const expenseData = {
-        name: newExpenseName,
-        frequency: newExpenseFrequency,
-        amount: newExpenseAmount,
-        userId: userId,
-        isDefault: false,
-        category: category || 'Other',
-      };
-  
-      if (isEditing && editingId) {
-        await updateDoc(doc(db, 'expenseSources', editingId), expenseData);
-        setExpenseSources(prevSources => prevSources.map(source =>
-          source.id === editingId ? { ...expenseData, id: editingId, isDefault: source.isDefault } : source
-        ));
-      } else {
-        await addDoc(collection(db, 'expenseSources'), expenseData);
-        await fetchExpenseSources();
-      }
-      handleCloseModal();
-    } catch (error: any) {
-      console.error('Error saving expense source:', error);
-      alert('Error saving expense source: ' + error.message);
-    }
-  }, [db, userId, newExpenseName, newExpenseFrequency, newExpenseAmount, isEditing, editingId, handleCloseModal]);
-
   const fetchExpenseSources = useCallback(async () => {
     if (!userId) return;
     
@@ -291,10 +175,40 @@ const ExpenseScreen = () => {
       alert('Error loading expense sources');
     }
   }, [db, userId]);
+  const handleSave = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      const expenseData = {
+        name: newExpenseName,
+        frequency: newExpenseFrequency,
+        amount: newExpenseAmount,
+        userId: userId,
+        isDefault: false,
+        category: selectedCategory,
+      };
+
+      if (isEditing && editingId) {
+        await updateDoc(doc(db, 'expenseSources', editingId), expenseData);
+        setExpenseSources(prevSources => prevSources.map(source =>
+          source.id === editingId ? { ...expenseData, id: editingId } : source
+        ));
+      } else {
+        await addDoc(collection(db, 'expenseSources'), expenseData);
+        await fetchExpenseSources();
+      }
+      handleCloseModal();
+    } catch (error: any) {
+      console.error('Error saving expense source:', error);
+      alert('Error saving expense source: ' + error.message);
+    }
+  }, [db, userId, newExpenseName, newExpenseFrequency, newExpenseAmount, selectedCategory, isEditing, editingId, handleCloseModal, fetchExpenseSources]);
+
+  
 
   const initializeDefaultSpending = useCallback(async () => {
     if (!userId) return;
-  
+
     try {
       const q = query(
         collection(db, 'expenseSources'),
@@ -307,20 +221,21 @@ const ExpenseScreen = () => {
         map.set(data.name, { id: doc.id, isDefault: data.isDefault });
         return map;
       }, new Map());
-  
-      for (const category of DEFAULT_SPENDING_ITEMS) {
-        for (const item of category.items) {
+
+      // Add missing default items with categories
+      for (const categoryGroup of DEFAULT_SPENDING_ITEMS) {
+        for (const item of categoryGroup.items) {
           if (!existingItems.has(item.name)) {
             await addDoc(collection(db, 'expenseSources'), {
               ...item,
               userId,
               isDefault: true,
-              category: category.category,
+              category: categoryGroup.category,
             });
           }
         }
       }
-  
+
       await fetchExpenseSources();
     } catch (error) {
       console.error('Error initializing default spending:', error);
@@ -333,14 +248,13 @@ const ExpenseScreen = () => {
     }
   }, [userId, initializeDefaultSpending]);
 
-  // Memoize render function
   const renderGroupedExpenseSources = useCallback(() => {
     return Object.entries(groupedSources).map(([category, sources]) => (
       <View key={category}>
         <View style={styles.categoryHeader}>
           <Text style={styles.categoryHeaderText}>{category}</Text>
         </View>
-  
+
         {sources.map(source => (
           <View key={source.id} style={styles.expenseItemWrapper}>
             <TouchableOpacity 
@@ -351,7 +265,7 @@ const ExpenseScreen = () => {
                 <View style={styles.expenseItem}>
                   <Text style={styles.expenseItemName}>{source.name}</Text>
                   <View style={styles.expenseItemRight}>
-                 <Icon name='dollar' color="green" size={18} />
+                    <Icon name='dollar' color="red" size={18} />
                     <Text style={styles.expenseItemText}>{source.amount.toFixed(2)}</Text>
                   </View>
                 </View>
@@ -361,13 +275,13 @@ const ExpenseScreen = () => {
               style={styles.editButton} 
               onPress={() => handleEdit(source)}
             >
-          <Icon name='pencil' color="white" size={25} />
+              <Icon name='pencil' color="white" size={25} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.deleteButton} 
               onPress={() => removeExpenseSource(source.id)}
             >
-            <Icon name='trash' color="white" size={25} />
+              <Icon name='trash' color="white" size={25} />
             </TouchableOpacity>
           </View>
         ))}
@@ -415,12 +329,15 @@ const ExpenseScreen = () => {
         itemName={newExpenseName}
         frequency={newExpenseFrequency}
         amount={newExpenseAmount}
+        category={selectedCategory}
+        categories={categories}
         type="Expense"
         onClose={handleCloseModal}
         onSave={handleSave}
         onChangeName={setNewExpenseName}
         onChangeFrequency={setNewExpenseFrequency}
         onChangeAmount={(text) => setNewExpenseAmount(parseFloat(text) || 0)}
+        onChangeCategory={setSelectedCategory}
       />
     </View>
   );

@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
-type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'annually'| 'quarterly';
+type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'annually' | 'quarterly';
 
 interface FormModalProps {
   visible: boolean;
@@ -11,12 +11,15 @@ interface FormModalProps {
   itemName: string;
   frequency: Frequency;
   amount: number;
+  category: string;
+  categories: string[];
   type: 'Income' | 'Expense';
   onClose: () => void;
   onSave: () => void;
   onChangeName: (name: string) => void;
   onChangeFrequency: (frequency: Frequency) => void;
   onChangeAmount: (amount: string) => void;
+  onChangeCategory: (category: string) => void;
 }
 
 const FormModal: React.FC<FormModalProps> = ({
@@ -25,12 +28,15 @@ const FormModal: React.FC<FormModalProps> = ({
   itemName,
   frequency,
   amount,
+  category,
+  categories,
   type,
   onClose,
   onSave,
   onChangeName,
   onChangeFrequency,
   onChangeAmount,
+  onChangeCategory,
 }) => {
   return (
     <Modal
@@ -57,8 +63,19 @@ const FormModal: React.FC<FormModalProps> = ({
             onChangeText={onChangeName}
           />
           
-     
-          
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>Category</Text>
+            <Picker
+              style={styles.picker}
+              selectedValue={category}
+              onValueChange={onChangeCategory}
+            >
+              {categories.map((cat) => (
+                <Picker.Item key={cat} label={cat} value={cat} />
+              ))}
+            </Picker>
+          </View>
+
           <TextInput
             style={styles.input}
             placeholder="Amount"
@@ -66,17 +83,22 @@ const FormModal: React.FC<FormModalProps> = ({
             value={amount.toString()}
             onChangeText={onChangeAmount}
           />
-     <Picker
-            style={styles.picker}
-            selectedValue={frequency}
-            onValueChange={(value) => onChangeFrequency(value as Frequency)}
-          >
-            <Picker.Item label="Weekly" value="weekly" />
-            <Picker.Item label="Fortnightly" value="fortnightly" />
-            <Picker.Item label="Monthly" value="monthly" />
-            <Picker.Item label="Annually" value="annually" />
-            <Picker.Item label="Quarterly" value="quarterly" />
-          </Picker>
+
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>Frequency</Text>
+            <Picker
+              style={styles.picker}
+              selectedValue={frequency}
+              onValueChange={(value) => onChangeFrequency(value as Frequency)}
+            >
+              <Picker.Item label="Weekly" value="weekly" />
+              <Picker.Item label="Fortnightly" value="fortnightly" />
+              <Picker.Item label="Monthly" value="monthly" />
+              <Picker.Item label="Annually" value="annually" />
+              <Picker.Item label="Quarterly" value="quarterly" />
+            </Picker>
+          </View>
+
           <View style={styles.modalButtons}>
             <TouchableOpacity 
               style={[styles.button, styles.cancelButton]}
@@ -166,6 +188,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  pickerContainer: {
+    marginBottom: 10,
+  },
+  pickerLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
   },
 });
 
