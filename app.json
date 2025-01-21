@@ -18,6 +18,17 @@
       "eas": {
         "projectId": "64ecfccc-e6b6-43f1-9814-3bd73c16e75c"
       }
-    }
+    },
+    "android": {
+      "package": "com.roger27.MyAuthApp"
+    },
+    "splash": {
+      "image": "./assets/images/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
