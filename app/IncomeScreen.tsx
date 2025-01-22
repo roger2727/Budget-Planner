@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
-
 import NavBar from '../components/NavBar';
 import FormModal from '../components/FormModal';
 import { auth } from './firebase';
@@ -11,8 +9,6 @@ import {
   query, where, getFirestore, updateDoc 
 } from 'firebase/firestore';
 import { DEFAULT_INCOME_ITEMS } from '@/constants/defaultItems/defaultIncomeItems';
-
-
 interface IncomeSource {
   id: string;
   name: string;
@@ -28,51 +24,17 @@ const IncomeForm = () => {
   const [newIncomeName, setNewIncomeName] = useState('');
   const [newIncomeFrequency, setNewIncomeFrequency] = useState<IncomeSource['frequency']>('weekly');
   const [newIncomeAmount, setNewIncomeAmount] = useState(0);
-  const [incomeViewMode, setIncomeViewMode] = useState<'weekly' | 'monthly' | 'annual' | 'quarterly'>('annual');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('Other');
 
-  const db = useMemo(() => getFirestore(), []); // Memoize db instance
+  const db = useMemo(() => getFirestore(), []);
   const userId = auth.currentUser?.uid;
   const categories = useMemo(() => {
     const cats = DEFAULT_INCOME_ITEMS.map(item => item.category);
     return [...new Set([...cats, 'Other'])];
   }, []);
-  // Memoize calculations for different income periods
-  const incomeCalculations = useMemo(() => {
-    const weekly = incomeSources.reduce((total, source) => 
-      total + (source.amount / (source.frequency === 'weekly' ? 1 : 
-        source.frequency === 'fortnightly' ? 2 : 
-        source.frequency === 'monthly' ? 4 : 52)), 0);
-
-    const monthly = incomeSources.reduce((total, source) => 
-      total + (source.amount / (source.frequency === 'monthly' ? 1 : 
-        source.frequency === 'fortnightly' ? 0.5 : 
-        source.frequency === 'annually' ? 12 : 4)), 0);
-
-    const annual = incomeSources.reduce((total, source) => 
-      total + (source.amount * (source.frequency === 'annually' ? 1 : 
-        source.frequency === 'fortnightly' ? 26 : 
-        source.frequency === 'monthly' ? 12 : 52)), 0);
-
-    const quarterly = incomeSources.reduce((total, source) => 
-      total + (source.amount / (source.frequency === 'quarterly' ? 1 : 
-        source.frequency === 'monthly' ? 3 : 4)), 0);
-
-    return { weekly, monthly, annual, quarterly };
-  }, [incomeSources]); // Only recalculate when incomeSources changes
-
-  // Memoize displayed income based on view mode and calculations
-  const displayedIncome = useMemo(() => {
-    switch(incomeViewMode) {
-      case 'weekly': return incomeCalculations.weekly;
-      case 'monthly': return incomeCalculations.monthly;
-      case 'quarterly': return incomeCalculations.quarterly;
-      default: return incomeCalculations.annual;
-    }
-  }, [incomeViewMode, incomeCalculations]);
 
   // Memoize grouped sources for rendering
   const groupedSources = useMemo(() => {
@@ -238,37 +200,32 @@ const IncomeForm = () => {
         </View>
 
         {sources.map(source => (
-          <View key={source.id} style={styles.incomeItemWrapper}>
-            <TouchableOpacity 
-              style={styles.itemTouchable}
-              onPress={() => handleEdit(source)}
-            >
-              <View style={[styles.incomeItemContainer, { borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}>
-                <View style={styles.incomeItem}>
-                  <Text style={styles.incomeItemName}>{source.name}</Text>
-                  <View style={styles.incomeItemRight}>
-                    <View style={styles.iconContainer}>
-                      <Icon name='calendar' color="blue" size={18} />
-                      <Icon name='dollar' color="green" size={18} />
-                    </View>
-                    <View style={styles.textContainer}>
-                      <Text style={styles.frequencyText}>{source.frequency}</Text>
-                      <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.deleteButton, { borderRadius: 0, borderTopRightRadius: 5, borderBottomRightRadius: 5 }]} 
-              onPress={() => removeIncomeSource(source.id)}
-            >
-              <Text style={{ color: 'white' }}>
-                <Icon name='trash' color="white" size={25} />
-              </Text>
-            </TouchableOpacity>
+  <View key={source.id} style={styles.incomeItemWrapper}>
+    <TouchableOpacity 
+      style={styles.itemTouchable}
+      onPress={() => handleEdit(source)}
+    >
+      <View style={styles.incomeItemContainer}>
+        <View style={styles.incomeItem}>
+          <Text style={styles.incomeItemName}>{source.name}</Text>
+          <View style={styles.incomeItemRight}>
+            <View style={styles.frequencyContainer}>
+              <Icon name='calendar' color="#6366F1" size={18} />
+              <Text style={styles.frequencyText}>{source.frequency}</Text>
+            </View>
+            <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
           </View>
-        ))}
+        </View>
+      </View>
+    </TouchableOpacity>
+    <TouchableOpacity 
+      style={styles.deleteButton} 
+      onPress={() => removeIncomeSource(source.id)}
+    >
+      <Icon name='trash' color="white" size={20} />
+    </TouchableOpacity>
+  </View>
+))}
       </View>
     ));
   }, [groupedSources, handleEdit, removeIncomeSource]);
@@ -277,7 +234,7 @@ const IncomeForm = () => {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          <Text style={styles.title}>Income</Text>
+        
           {renderGroupedIncomeSources()}
           
           <View style={styles.addButtonContainer}>
@@ -289,26 +246,7 @@ const IncomeForm = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.totals}>
-            <View >
-              <Picker
-                style={styles.picker}
-                selectedValue={incomeViewMode}
-                onValueChange={(value) => setIncomeViewMode(value as 'weekly' | 'monthly' | 'annual' | 'quarterly')}
-              >
-                <Picker.Item label="Weekly" value="weekly" />
-                <Picker.Item label="Monthly" value="monthly" />
-                <Picker.Item label="Annual" value="annual" />
-                <Picker.Item label="Quarterly" value="quarterly" />
-              </Picker>
-            </View>
-            <Text style={styles.totalLabel}>
-              Total {incomeViewMode.charAt(0).toUpperCase() + incomeViewMode.slice(1)} Income:
-            </Text>
-            <Text style={[styles.totalAmount, { color: 'green' }]}>
-              ${displayedIncome.toFixed(2)}
-            </Text>
-          </View>
+       
         </View>
       </ScrollView>
       
@@ -334,6 +272,28 @@ const IncomeForm = () => {
 };
 
 const styles = StyleSheet.create({
+  incomeItemRight: {
+    alignItems: 'flex-end',
+    minWidth: 120,
+  },
+  
+  frequencyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+  },
+  
+  frequencyText: {
+    fontSize: 14,
+    color: '#6366F1',
+  },
+  
+  amountText: {
+    fontSize: 23,
+    fontWeight: 'bold',
+    color: '#10B981',
+  },
   incomeItemWrapper: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -341,10 +301,11 @@ const styles = StyleSheet.create({
   },
   incomeItemContainer: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#F9FAFB', 
     padding: 10,
-    borderTopLeftRadius: 5,
-    borderBottomLeftRadius: 5,
+    borderTopLeftRadius:10,
+    borderBottomLeftRadius:10,
+    
   },
   incomeItem: {
     flexDirection: 'row',
@@ -356,79 +317,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     marginRight: 10,
+    color: '#1A1A1A', 
   },
-  incomeItemRight: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    minWidth: 80, // Ensures consistent width for the right section
-  },
-  iconContainer: {
-    width: 24, // Fixed width for icons
-    height: 50,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginRight: 4,
-  },
-  textContainer: {
-    height: 50,
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-  },
-  frequencyText: {
-    fontSize: 14,
-    color: '#666',
-    minWidth: 80, // Ensures consistent width for frequency text
-  },
-  amountText: {
-    fontSize: 14,
-    fontWeight: '500',
-    minWidth: 80, // Ensures consistent width for amount text
-  },
+ 
   deleteButton: {
-    backgroundColor: 'red',
-    borderTopRightRadius: 5,
-    borderBottomRightRadius: 5,
+    backgroundColor: '#F43F5E', 
+    borderTopRightRadius:40,
+    borderBottomRightRadius:40,
     justifyContent: 'center',
     alignItems: 'center',
+    borderColor: 'white',
     width: 40,
   },
-  
-  iconTextStack: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  iconColumn: {
-    width: 20,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 45,  // Adjust this value to control vertical spacing between icons
-  },
-  textColumn: {
-    marginLeft: 8,
-    height: 45,  // Match the iconColumn height
-    justifyContent: 'space-between',
-  },
- 
-  incomeItemText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  
-  frequencyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
- 
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
- 
-  // Container and Layout
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
   },
   content: {
     flex: 1,
@@ -438,167 +341,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTouchable: {
-    flex: 1,  // This ensures it takes up all available space
-  },
-  // Title and Headers
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  frequencyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
-  frequencyHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  frequencyIndicator: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
-    marginRight: 8,
+    flex: 1,
   },
 
-  // Add Button
   addButtonContainer: {
     marginBottom: 20,
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FBBF24', 
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
   },
   addButtonText: {
-    color: '#fff',
+    color: 'black',
     fontSize: 16,
     fontWeight: 'bold',
   },
 
-  // Income Items
+
  
- 
-
-  // Delete Button
-
-
-  // Modal Styles
- 
-
-  // Form Elements
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-  },
-  picker: {
-    marginBottom: 10,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-  },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f2f2f2',
-    flex: 1,
-    marginRight: 10,
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    flex: 1,
-    marginLeft: 10,
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     textAlign: 'center',
   },
 
-  // Totals Section
-  totals: {
-    marginTop: 20,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  totalAmount: {
-    fontSize: 18,
-    marginBottom: 10,
-  },
-
-  // Legend
-  legendContainer: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  legendTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  legendItems: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    marginRight: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  legendText: {
-    fontSize: 12,
-  },
-  editButton: {
-    backgroundColor: '#4CAF50', // Green color
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 40,
-  },
   categoryHeader: {
     paddingVertical: 10,
     marginBottom: 10,
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 15,
     borderRadius: 5,
+    textAlign: 'center',
+    
   },
   categoryHeaderText: {
-    fontSize: 18,
+    textAlign: 'center',
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white', 
+    backgroundColor:'#4F46E5',
+    width: "100%",
+    borderRadius: 8,
+    padding:8,
+
   },
 });
-
 export default IncomeForm;

@@ -1,10 +1,11 @@
 // app/home.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import NavBar from '../components/NavBar';
+
 
 export default function HomeScreen() {
   const handleLogout = async () => {
@@ -32,7 +33,9 @@ export default function HomeScreen() {
         <Text style={styles.title}>Hello!</Text>
         <TouchableOpacity style={styles.button} onPress={handleLogout}>
           <Text style={styles.buttonText}>Logout</Text>
+        
         </TouchableOpacity>
+        <Image source={require('../assets/images/logo.png')} />
         <TouchableOpacity style={styles.button} onPress={navigateIncomeScreen}>
           <Text style={styles.buttonText}>START</Text>
         </TouchableOpacity>

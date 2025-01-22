@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { DEFAULT_SPENDING_ITEMS } from '../constants/defaultItems/defaultSpendingItems';
 
@@ -29,29 +28,13 @@ interface ExpenseSource {
   isDefault: boolean;
   category: string;
 }
-type FrequencyColorMap = {
-  [K in ExpenseSource['frequency']]: string;
-};
-
-type GroupedExpenseSources = {
-  [K in ExpenseSource['frequency']]: ExpenseSource[];
-};
-
-const FREQUENCY_COLORS: FrequencyColorMap = {
-  weekly: '#ffcdd2',    // Light Red
-  fortnightly: '#f8bbd0', // Light Pink
-  monthly: '#e1bee7',    // Light Purple
-  annually: '#d1c4e9',   // Light Deep Purple
-  quarterly: '#c5cae9',  // Light Indigo
-};
-
 
 const ExpenseScreen = () => {
   const [expenseSources, setExpenseSources] = useState<ExpenseSource[]>([]);
   const [newExpenseName, setNewExpenseName] = useState('');
   const [newExpenseFrequency, setNewExpenseFrequency] = useState<ExpenseSource['frequency']>('weekly');
   const [newExpenseAmount, setNewExpenseAmount] = useState(0);
-  const [expenseViewMode, setExpenseViewMode] = useState<'weekly' | 'monthly' | 'annual'>('annual');
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,42 +48,9 @@ const ExpenseScreen = () => {
     return [...new Set([...cats, 'Other'])];
   }, []);
 
-  // Expense calculations
-  const expenseCalculations = useMemo(() => {
-    const weekly = expenseSources.reduce((total, source) => 
-      total + (source.amount / (source.frequency === 'weekly' ? 1 : 
-        source.frequency === 'fortnightly' ? 2 : 
-        source.frequency === 'monthly' ? 4 : 52)), 0);
-
-    const monthly = expenseSources.reduce((total, source) => 
-      total + (source.amount / (source.frequency === 'monthly' ? 1 : 
-        source.frequency === 'fortnightly' ? 0.5 : 
-        source.frequency === 'annually' ? 12 : 4)), 0);
-
-    const annual = expenseSources.reduce((total, source) => 
-      total + (source.amount * (source.frequency === 'annually' ? 1 : 
-        source.frequency === 'fortnightly' ? 26 : 
-        source.frequency === 'monthly' ? 12 : 52)), 0);
-
-    const quarterly = expenseSources.reduce((total, source) => 
-      total + (source.amount / (source.frequency === 'quarterly' ? 1 : 
-        source.frequency === 'monthly' ? 3 : 4)), 0);
-
-    return { weekly, monthly, annual, quarterly };
-  }, [expenseSources]);
-
-  const displayedExpense = useMemo(() => {
-    switch(expenseViewMode) {
-      case 'weekly': return expenseCalculations.weekly;
-      case 'monthly': return expenseCalculations.monthly;
-      default: return expenseCalculations.annual;
-    }
-  }, [expenseViewMode, expenseCalculations]);
-
   const groupedSources = useMemo(() => {
     const grouped: { [key: string]: ExpenseSource[] } = {};
 
-    // Initialize all categories
     categories.forEach(category => {
       grouped[category] = [];
     });
@@ -256,35 +206,32 @@ const ExpenseScreen = () => {
         </View>
 
         {sources.map(source => (
-          <View key={source.id} style={styles.expenseItemWrapper}>
-            <TouchableOpacity 
-              style={styles.itemTouchable}
-              onPress={() => handleEdit(source)}
-            >
-              <View style={styles.expenseItemContainer}>
-                <View style={styles.expenseItem}>
-                  <Text style={styles.expenseItemName}>{source.name}</Text>
-                  <View style={styles.expenseItemRight}>
-                    <Icon name='dollar' color="red" size={18} />
-                    <Text style={styles.expenseItemText}>{source.amount.toFixed(2)}</Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.editButton} 
-              onPress={() => handleEdit(source)}
-            >
-              <Icon name='pencil' color="white" size={25} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.deleteButton} 
-              onPress={() => removeExpenseSource(source.id)}
-            >
-              <Icon name='trash' color="white" size={25} />
-            </TouchableOpacity>
+  <View key={source.id} style={styles.expenseItemWrapper}>
+    <TouchableOpacity 
+      style={styles.itemTouchable}
+      onPress={() => handleEdit(source)}
+    >
+      <View style={styles.expenseItemContainer}>
+        <View style={styles.expenseItem}>
+          <Text style={styles.expenseItemName}>{source.name}</Text>
+          <View style={styles.expenseItemRight}>
+            <View style={styles.frequencyContainer}>
+              <Icon name='calendar' color="#EF4444" size={18} />
+              <Text style={styles.frequencyText}>{source.frequency}</Text>
+            </View>
+            <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
           </View>
-        ))}
+        </View>
+      </View>
+    </TouchableOpacity>
+    <TouchableOpacity 
+      style={styles.deleteButton} 
+      onPress={() => removeExpenseSource(source.id)}
+    >
+      <Icon name='trash' color="white" size={20} />
+    </TouchableOpacity>
+  </View>
+))}
       </View>
     ));
   }, [groupedSources, handleEdit, removeExpenseSource]);
@@ -292,7 +239,7 @@ const ExpenseScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Spending</Text>
+    
         
         {renderGroupedExpenseSources()}
         
@@ -305,21 +252,7 @@ const ExpenseScreen = () => {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.totals}>
-          <Picker
-            style={styles.picker}
-            selectedValue={expenseViewMode}
-            onValueChange={(value) => setExpenseViewMode(value as 'weekly' | 'monthly' | 'annual')}
-          >
-            <Picker.Item label="Weekly" value="weekly" />
-            <Picker.Item label="Monthly" value="monthly" />
-            <Picker.Item label="Annual" value="annual" />
-          </Picker>
-          <Text style={styles.totalLabel}>
-            Total {expenseViewMode === 'weekly' ? 'Weekly' : expenseViewMode === 'monthly' ? 'Monthly' : 'Annual'} Spending:
-          </Text>
-          <Text style={[styles.totalAmount, { color: 'red' }]}>-${displayedExpense.toFixed(2)}</Text>
-        </View>
+      
       </ScrollView>
 
       <NavBar />
@@ -346,7 +279,28 @@ const ExpenseScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
+  },
+  expenseItemRight: {
+    alignItems: 'flex-end',
+    minWidth: 120,
+    justifyContent: 'flex-end',
+  },
+  frequencyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+    justifyContent: 'flex-end',
+  },
+  amountText: {
+    fontSize: 23,
+    fontWeight: 'bold',
+    color: '#10B981',
+  },
+  frequencyText: {
+    fontSize: 14,
+    color: '#6366F1',
   },
   scrollView: {
     flex: 1,
@@ -366,57 +320,39 @@ const styles = StyleSheet.create({
   },
   expenseItemContainer: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#F9FAFB', 
     padding: 10,
-    borderTopLeftRadius: 5,
-    borderBottomLeftRadius: 5,
+    borderTopLeftRadius:10,
+    borderBottomLeftRadius:10,
   },
   expenseItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    flexWrap: 'wrap',
   },
   expenseItemName: {
     fontSize: 16,
     fontWeight: 'bold',
     flex: 1,
     marginRight: 10,
+    color: '#1A1A1A', 
   },
-  expenseItemRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 0,
-    minWidth: 70,
-  },
+
   expenseItemText: {
     fontSize: 14,
     marginHorizontal: 5,
   },
   deleteButton: {
-    backgroundColor: 'red',
-    borderTopRightRadius: 5,
-    borderBottomRightRadius: 5,
+    backgroundColor: '#F43F5E', 
+    borderTopRightRadius:40,
+    borderBottomRightRadius:40,
     justifyContent: 'center',
     alignItems: 'center',
+    borderColor: 'white',
     width: 40,
   },
-  newExpenseContainer: {
-    backgroundColor: '#f2f2f2',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-  },
-  picker: {
-    marginBottom: 10,
-  },
+
+
   button: {
     backgroundColor: '#007AFF',
     padding: 10,
@@ -427,24 +363,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  totals: {
-    marginTop: 20,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  totalAmount: {
-    fontSize: 18,
-    marginBottom: 10,
-  },
+
 
   addButtonContainer: {
     marginBottom: 20,
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FBBF24', 
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -455,67 +380,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
  
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  legendContainer: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  legendTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  legendItems: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    marginRight: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  legendText: {
-    fontSize: 12,
-  },
+
   frequencyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     marginBottom: 10,
   },
-  frequencyHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  frequencyIndicator: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
-    marginRight: 8,
-  },
+
+
   itemTouchable: {
     flex: 1,
   },
@@ -528,14 +401,18 @@ const styles = StyleSheet.create({
   categoryHeader: {
     paddingVertical: 10,
     marginBottom: 10,
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 15,
     borderRadius: 5,
+    textAlign: 'center',
   },
   categoryHeaderText: {
-    fontSize: 18,
+    textAlign: 'center',
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white', 
+    backgroundColor:'#4F46E5',
+    width: "100%",
+    borderRadius: 8,
+    padding:8,
   },
 
 });
