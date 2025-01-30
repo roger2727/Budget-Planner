@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet,  ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth } from './firebase';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import NavBar from '@/components/NavBar';
+import { auth } from '../../firebase';
+import DonutChart from '@/components/RingChart';
+import { ExpenseSource } from '@/types/interfaces';
 
 interface IncomeSource {
   id: string;
@@ -14,8 +13,7 @@ interface IncomeSource {
   amount: number;
   userId: string;
 }
-
-interface ExpenseSource {
+interface SavingSource {
   id: string;
   name: string;
   frequency: 'weekly' | 'fortnightly' | 'monthly' | 'annually';
@@ -28,6 +26,7 @@ type ViewMode = 'weekly' | 'monthly' | 'annual';
 const SummaryScreen = () => {
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
   const [expenseSources, setExpenseSources] = useState<ExpenseSource[]>([]);
+  const [savingSources, setSavingSources] = useState<SavingSource[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('annual');
   const db = getFirestore();
   const userId = auth.currentUser?.uid;
@@ -63,6 +62,18 @@ const SummaryScreen = () => {
         expenseData.push({ id: doc.id, ...doc.data() } as ExpenseSource);
       });
       setExpenseSources(expenseData);
+
+      // Fetch saving sources
+      const savingQuery = query(
+        collection(db, 'savingSources'),
+        where('userId', '==', userId)
+      );
+      const savingSnapshot = await getDocs(savingQuery);
+      const savingData: SavingSource[] = [];
+      savingSnapshot.forEach((doc) => {
+        savingData.push({ id: doc.id, ...doc.data() } as SavingSource);
+      });
+      setSavingSources(savingData);
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('Error loading summary data');
@@ -107,15 +118,53 @@ const SummaryScreen = () => {
     }, 0);
   };
 
+  const calculateSavings = (frequency: ViewMode): number => {
+    return savingSources.reduce((total, source) => {
+      switch (frequency) {
+        case 'weekly':
+          return total + (source.amount / (source.frequency === 'weekly' ? 1 : 
+            source.frequency === 'fortnightly' ? 2 : 
+            source.frequency === 'monthly' ? 4 : 52));
+        case 'monthly':
+          return total + (source.amount / (source.frequency === 'monthly' ? 1 : 
+            source.frequency === 'fortnightly' ? 0.5 : 
+            source.frequency === 'annually' ? 12 : 4));
+        default: // annual
+          return total + (source.amount * (source.frequency === 'annually' ? 1 : 
+            source.frequency === 'fortnightly' ? 26 : 
+            source.frequency === 'monthly' ? 12 : 52));
+      }
+    }, 0);
+  };
+
+
+useEffect(() => {
+  const fetchExpenses = async () => {
+    if (!userId) return;
+    
+    const q = query(
+      collection(db, 'expenseSources'),
+      where('userId', '==', userId)
+    );
+    
+    const snapshot = await getDocs(q);
+    setExpenseSources(snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    }) as ExpenseSource));
+  };
+
+  fetchExpenses();
+}, [userId]);
+
   const totalIncome = calculateIncome(viewMode);
-  const totalExpenses = calculateExpenses(viewMode);
-  const balance = totalIncome - totalExpenses;
+  const totalSavings = calculateSavings(viewMode);
+
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Financial Summary</Text>
-
+        <View style={styles.summaryCard}>
         <View style={styles.pickerContainer}>
           <Picker
             style={styles.picker}
@@ -128,53 +177,33 @@ const SummaryScreen = () => {
           </Picker>
         </View>
 
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <View style={styles.iconContainer}>
-                      <Icon name='arrow-up' color="green" size={25} />
-              </View>
-              <Text style={styles.summaryLabel}>Total Income</Text>
-              <Text style={[styles.summaryAmount, { color: 'green' }]}>
-                ${totalIncome.toFixed(2)}
-              </Text>
-            </View>
-          </View>
+      
+ 
+      <View style={styles.chartContainer}>
+      <View style={styles.chartContainer}>
+      <DonutChart 
+  income={totalIncome}
+  expenses={expenseSources}
+  savings={totalSavings}
+  viewMode={viewMode}
+/>
+</View>
+</View>
 
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <View style={styles.iconContainer}>
-              <Icon name='arrow-down' color="red" size={25} />
-              </View>
-              <Text style={styles.summaryLabel}>Total Expenses</Text>
-              <Text style={[styles.summaryAmount, { color: 'red' }]}>
-                -${totalExpenses.toFixed(2)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.balanceContainer, { backgroundColor: balance >= 0 ? '#e8f5e9' : '#ffebee' }]}>
-          <Icon name='dollar' color={balance >= 0 ? 'green' : 'red'} size={25} />
-         
-            <Text style={styles.balanceLabel}>
-              {balance >= 0 ? 'Surplus' : 'Deficit'}
-            </Text>
-            <Text style={[styles.balanceAmount, { color: balance >= 0 ? 'green' : 'red' }]}>
-              ${Math.abs(balance).toFixed(2)}
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-
-      <NavBar />
+</View>
+</ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  chartContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
   },
   scrollView: {
     flex: 1,
@@ -196,25 +225,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1C202F' ,
     borderRadius: 10,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   summaryRow: {
     marginBottom: 20,
   },
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-  },
+ 
   iconContainer: {
     marginRight: 10,
   },
@@ -244,7 +262,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
- 
 });
 
 export default SummaryScreen;

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import NavBar from '../components/NavBar';
-import FormModal from '../components/FormModal';
-import { auth } from './firebase';
+import FormModal from '../../../components/FormModal';
+import { auth } from '../../firebase';
 import { 
   doc, collection, addDoc, deleteDoc, getDocs, 
   query, where, getFirestore, updateDoc 
@@ -89,11 +88,12 @@ const IncomeForm = () => {
     try {
       await deleteDoc(doc(db, 'incomeSources', id));
       setIncomeSources(prevSources => prevSources.filter((source) => source.id !== id));
+      handleCloseModal();
     } catch (error: any) {
       console.error('Error removing income source:', error);
       alert('Error removing income source');
     }
-  }, [db]);
+  }, [db, handleCloseModal]);
 
   const handleSave = useCallback(async () => {
     if (!userId) return;
@@ -192,7 +192,7 @@ const IncomeForm = () => {
   }, [userId, initializeDefaultIncome]);
 
   // Memoize the render function for income sources
-  const renderGroupedIncomeSources = useCallback(() => {
+const renderGroupedIncomeSources = useCallback(() => {
     return Object.entries(groupedSources).map(([category, sources]) => (
       <View key={category}>
         <View style={styles.categoryHeader}>
@@ -200,41 +200,31 @@ const IncomeForm = () => {
         </View>
 
         {sources.map(source => (
-  <View key={source.id} style={styles.incomeItemWrapper}>
-    <TouchableOpacity 
-      style={styles.itemTouchable}
-      onPress={() => handleEdit(source)}
-    >
-      <View style={styles.incomeItemContainer}>
-        <View style={styles.incomeItem}>
-          <Text style={styles.incomeItemName}>{source.name}</Text>
-          <View style={styles.incomeItemRight}>
-            <View style={styles.frequencyContainer}>
-              <Icon name='calendar' color="#6366F1" size={18} />
-              <Text style={styles.frequencyText}>{source.frequency}</Text>
+          <TouchableOpacity 
+            key={source.id}
+            style={styles.incomeItemContainer}
+            onPress={() => handleEdit(source)}
+          >
+            <View style={styles.incomeItem}>
+              <Text style={styles.incomeItemName}>{source.name}</Text>
+              <View style={styles.incomeItemRight}>
+                <View style={styles.frequencyContainer}>
+                  <Icon name='calendar' color="grey" size={18} />
+                  <Text style={styles.frequencyText}>{source.frequency}</Text>
+                </View>
+                <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
+              </View>
             </View>
-            <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-    <TouchableOpacity 
-      style={styles.deleteButton} 
-      onPress={() => removeIncomeSource(source.id)}
-    >
-      <Icon name='trash' color="white" size={20} />
-    </TouchableOpacity>
-  </View>
-))}
+          </TouchableOpacity>
+        ))}
       </View>
     ));
-  }, [groupedSources, handleEdit, removeIncomeSource]);
+  }, [groupedSources, handleEdit]);
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-        
           {renderGroupedIncomeSources()}
           
           <View style={styles.addButtonContainer}>
@@ -245,12 +235,10 @@ const IncomeForm = () => {
               <Text style={styles.addButtonText}>Add Income</Text>
             </TouchableOpacity>
           </View>
-
-       
         </View>
       </ScrollView>
       
-      <NavBar />
+   
       <FormModal
         visible={isModalVisible}
         isEditing={isEditing}
@@ -262,6 +250,7 @@ const IncomeForm = () => {
         type="Income"
         onClose={handleCloseModal}
         onSave={handleSave}
+        onDelete={isEditing && editingId ? () => removeIncomeSource(editingId) : undefined}
         onChangeName={setNewIncomeName}
         onChangeFrequency={setNewIncomeFrequency}
         onChangeAmount={(text) => setNewIncomeAmount(parseFloat(text) || 0)}
@@ -276,36 +265,26 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     minWidth: 120,
   },
-  
   frequencyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
     gap: 6,
   },
-  
   frequencyText: {
     fontSize: 14,
-    color: '#6366F1',
+    color: 'grey',
   },
-  
   amountText: {
     fontSize: 23,
-    fontWeight: 'bold',
-    color: '#10B981',
-  },
-  incomeItemWrapper: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginBottom: 15,
+
+    color: '#22C55E',
   },
   incomeItemContainer: {
-    flex: 1,
-    backgroundColor: '#F9FAFB', 
+    backgroundColor: '#1C202F',
     padding: 10,
-    borderTopLeftRadius:10,
-    borderBottomLeftRadius:10,
-    
+    borderRadius: 10,
+    marginBottom: 15,
   },
   incomeItem: {
     flexDirection: 'row',
@@ -317,17 +296,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     marginRight: 10,
-    color: '#1A1A1A', 
-  },
- 
-  deleteButton: {
-    backgroundColor: '#F43F5E', 
-    borderTopRightRadius:40,
-    borderBottomRightRadius:40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderColor: 'white',
-    width: 40,
+    color: 'white',
   },
   container: {
     flex: 1,
@@ -340,15 +309,11 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  itemTouchable: {
-    flex: 1,
-  },
-
   addButtonContainer: {
     marginBottom: 20,
   },
   addButton: {
-    backgroundColor: '#FBBF24', 
+    backgroundColor: '#FBBF24',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -358,32 +323,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-
- 
   buttonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     textAlign: 'center',
   },
-
   categoryHeader: {
     paddingVertical: 10,
     marginBottom: 10,
     borderRadius: 5,
     textAlign: 'center',
-    
   },
   categoryHeaderText: {
     textAlign: 'center',
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white', 
-    backgroundColor:'#4F46E5',
+    color: '4F46E5',
+    backgroundColor: '#4F46E5',
     width: "100%",
     borderRadius: 8,
-    padding:8,
-
+    padding: 8,
   },
 });
+
 export default IncomeForm;

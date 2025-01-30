@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { DEFAULT_SPENDING_ITEMS } from '../constants/defaultItems/defaultSpendingItems';
-
+import { DEFAULT_SPENDING_ITEMS } from '../../../constants/defaultItems/defaultSpendingItems';
 import { 
   doc, 
   collection, 
@@ -14,10 +13,9 @@ import {
   getFirestore, 
   updateDoc
 } from 'firebase/firestore';
-import { auth } from './firebase';
+import { auth } from '../../firebase';
 import NavBar from '@/components/NavBar';
-import FormModal from '../components/FormModal';
-
+import FormModal from '../../../components/FormModal';
 
 interface ExpenseSource {
   id: string;
@@ -34,7 +32,6 @@ const ExpenseScreen = () => {
   const [newExpenseName, setNewExpenseName] = useState('');
   const [newExpenseFrequency, setNewExpenseFrequency] = useState<ExpenseSource['frequency']>('weekly');
   const [newExpenseAmount, setNewExpenseAmount] = useState(0);
-
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -55,7 +52,6 @@ const ExpenseScreen = () => {
       grouped[category] = [];
     });
 
-    // Group sources by their saved category
     expenseSources.forEach(source => {
       const category = source.category || 'Other';
       if (!grouped[category]) {
@@ -64,7 +60,6 @@ const ExpenseScreen = () => {
       grouped[category].push(source);
     });
 
-    // Remove empty categories
     Object.keys(grouped).forEach(key => {
       if (grouped[key].length === 0) {
         delete grouped[key];
@@ -103,6 +98,7 @@ const ExpenseScreen = () => {
       alert('Error removing expense source');
     }
   }, [db]);
+
   const fetchExpenseSources = useCallback(async () => {
     if (!userId) return;
     
@@ -125,6 +121,7 @@ const ExpenseScreen = () => {
       alert('Error loading expense sources');
     }
   }, [db, userId]);
+
   const handleSave = useCallback(async () => {
     if (!userId) return;
 
@@ -154,8 +151,6 @@ const ExpenseScreen = () => {
     }
   }, [db, userId, newExpenseName, newExpenseFrequency, newExpenseAmount, selectedCategory, isEditing, editingId, handleCloseModal, fetchExpenseSources]);
 
-  
-
   const initializeDefaultSpending = useCallback(async () => {
     if (!userId) return;
 
@@ -172,7 +167,6 @@ const ExpenseScreen = () => {
         return map;
       }, new Map());
 
-      // Add missing default items with categories
       for (const categoryGroup of DEFAULT_SPENDING_ITEMS) {
         for (const item of categoryGroup.items) {
           if (!existingItems.has(item.name)) {
@@ -206,41 +200,30 @@ const ExpenseScreen = () => {
         </View>
 
         {sources.map(source => (
-  <View key={source.id} style={styles.expenseItemWrapper}>
-    <TouchableOpacity 
-      style={styles.itemTouchable}
-      onPress={() => handleEdit(source)}
-    >
-      <View style={styles.expenseItemContainer}>
-        <View style={styles.expenseItem}>
-          <Text style={styles.expenseItemName}>{source.name}</Text>
-          <View style={styles.expenseItemRight}>
-            <View style={styles.frequencyContainer}>
-              <Icon name='calendar' color="#EF4444" size={18} />
-              <Text style={styles.frequencyText}>{source.frequency}</Text>
+          <TouchableOpacity 
+            key={source.id}
+            style={styles.expenseItemContainer}
+            onPress={() => handleEdit(source)}
+          >
+            <View style={styles.expenseItem}>
+              <Text style={styles.expenseItemName}>{source.name}</Text>
+              <View style={styles.expenseItemRight}>
+                <View style={styles.frequencyContainer}>
+                  <Icon name='calendar' color="grey" size={18} />
+                  <Text style={styles.frequencyText}>{source.frequency}</Text>
+                </View>
+                <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
+              </View>
             </View>
-            <Text style={styles.amountText}>${source.amount.toFixed(2)}</Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-    <TouchableOpacity 
-      style={styles.deleteButton} 
-      onPress={() => removeExpenseSource(source.id)}
-    >
-      <Icon name='trash' color="white" size={20} />
-    </TouchableOpacity>
-  </View>
-))}
+          </TouchableOpacity>
+        ))}
       </View>
     ));
-  }, [groupedSources, handleEdit, removeExpenseSource]);
+  }, [groupedSources, handleEdit]);
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-    
-        
         {renderGroupedExpenseSources()}
         
         <View style={styles.addButtonContainer}>
@@ -251,11 +234,7 @@ const ExpenseScreen = () => {
             <Text style={styles.addButtonText}>Add Spending</Text>
           </TouchableOpacity>
         </View>
-        
-      
       </ScrollView>
-
-      <NavBar />
       <FormModal
         visible={isModalVisible}
         isEditing={isEditing}
@@ -267,6 +246,7 @@ const ExpenseScreen = () => {
         type="Expense"
         onClose={handleCloseModal}
         onSave={handleSave}
+        onDelete={isEditing && editingId ? () => removeExpenseSource(editingId) : undefined}
         onChangeName={setNewExpenseName}
         onChangeFrequency={setNewExpenseFrequency}
         onChangeAmount={(text) => setNewExpenseAmount(parseFloat(text) || 0)}
@@ -284,46 +264,26 @@ const styles = StyleSheet.create({
   expenseItemRight: {
     alignItems: 'flex-end',
     minWidth: 120,
-    justifyContent: 'flex-end',
   },
   frequencyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
     gap: 6,
-    justifyContent: 'flex-end',
-  },
-  amountText: {
-    fontSize: 23,
-    fontWeight: 'bold',
-    color: '#10B981',
   },
   frequencyText: {
     fontSize: 14,
-    color: '#6366F1',
+    color: 'grey',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  expenseItemWrapper: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginBottom: 15,
+  amountText: {
+    fontSize: 23,
+    color: '#22C55E',
   },
   expenseItemContainer: {
-    flex: 1,
-    backgroundColor: '#F9FAFB', 
+    backgroundColor: '#1C202F',
     padding: 10,
-    borderTopLeftRadius:10,
-    borderBottomLeftRadius:10,
+    borderRadius: 10,
+    marginBottom: 15,
   },
   expenseItem: {
     flexDirection: 'row',
@@ -335,68 +295,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     marginRight: 10,
-    color: '#1A1A1A', 
+    color: 'white',
   },
-
-  expenseItemText: {
-    fontSize: 14,
-    marginHorizontal: 5,
+  scrollView: {
+    flex: 1,
   },
-  deleteButton: {
-    backgroundColor: '#F43F5E', 
-    borderTopRightRadius:40,
-    borderBottomRightRadius:40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderColor: 'white',
-    width: 40,
+  scrollContent: {
+    padding: 20,
   },
-
-
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-
-
   addButtonContainer: {
     marginBottom: 20,
   },
   addButton: {
-    backgroundColor: '#FBBF24', 
+    backgroundColor: '#FBBF24',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
   },
   addButtonText: {
-    color: '#fff',
+    color: 'black',
     fontSize: 16,
     fontWeight: 'bold',
-  },
- 
-
-  frequencyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
-
-
-  itemTouchable: {
-    flex: 1,
-  },
-  editButton: {
-    backgroundColor: '#4CAF50', // Green color
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 40,
   },
   categoryHeader: {
     paddingVertical: 10,
@@ -408,13 +327,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white', 
-    backgroundColor:'#4F46E5',
+    color: 'black',
+    backgroundColor: '#4F46E5',
     width: "100%",
     borderRadius: 8,
-    padding:8,
+    padding: 8,
   },
-
 });
 
 export default ExpenseScreen;

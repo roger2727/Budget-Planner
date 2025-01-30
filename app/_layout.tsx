@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import { auth } from './firebase';
+import PersistentLayout from '@/components/PresistantLayout';
+
 
 
 
@@ -28,43 +30,151 @@ export default function RootLayout() {
   if (!user) {
     return (
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/register" />
+        <Stack.Screen name="screens/auth/login" />
+        <Stack.Screen name="screens/auth/register" />
       
         <Stack.Screen name="index" redirect />
-        <Stack.Screen name="Home" />
+        <Stack.Screen name="screens/main/Home" />
       </Stack>
     );
   }
 
   return (
+    <PersistentLayout>
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen 
-        name="Home" 
+        name="screens/main/Home" 
         options={{
-          title: "Budget Planner",
-          headerBackVisible: false,
+          header: () => (
+            <View style={{
+              height: 80,
+              backgroundColor: '#0f0f0f',
+              justifyContent: 'center',
+             
+            }}>
+              <Text style={{
+                color: 'white',
+                fontSize: 30,
+                fontWeight: 'bold',
+                textAlign: 'center'
+              }}>
+                Home
+              </Text>
+            </View>
+          ),
+          headerShown: true,
+          contentStyle: {
+            backgroundColor: '#f0f0f0',
+          },
         }} 
       />
+<Stack.Screen 
+  name="screens/main/IncomeScreen" 
+  options={{
+    header: () => (
+      <View style={{
+        height: 80,
+        backgroundColor: '#0f0f0f',
+        justifyContent: 'center',
+       
+      }}>
+        <Text style={{
+          color: 'white',
+          fontSize: 30,
+          fontWeight: 'bold',
+          textAlign: 'center'
+        }}>
+          Income
+        </Text>
+      </View>
+    ),
+    headerShown: true,
+    contentStyle: {
+      backgroundColor: '#f0f0f0',
+    },
+  }} 
+/>
       <Stack.Screen 
-        name="IncomeScreen" 
+        name="screens/main/ExpanseScreen" 
         options={{
-          title: "Income Screen",
+          header: () => (
+            <View style={{
+              height: 80,
+              backgroundColor: '#0f0f0f',
+              justifyContent: 'center',
+             
+            }}>
+              <Text style={{
+                color: 'white',
+                fontSize: 30,
+                fontWeight: 'bold',
+                textAlign: 'center'
+              }}>
+                Expanses
+              </Text>
+            </View>
+          ),
+          headerShown: true,
+          contentStyle: {
+            backgroundColor: '#f0f0f0',
+          },
         }} 
       />
-      <Stack.Screen 
-        name="ExpanseScreen" 
+           <Stack.Screen 
+        name="screens/main/SavingScreen" 
+        
         options={{
-          title: "Expenses Screen",
+          header: () => (
+            <View style={{
+              height: 80,
+              backgroundColor: '#0f0f0f',
+              justifyContent: 'center',
+             
+            }}>
+              <Text style={{
+                color: 'white',
+                fontSize: 30,
+                fontWeight: 'bold',
+                textAlign: 'center'
+              }}>
+                Savings
+              </Text>
+            </View>
+          ),
+          headerShown: true,
+          contentStyle: {
+            backgroundColor: '#f0f0f0',
+          },
+        }}   />
+        <Stack.Screen 
+        name="screens/main/SummaryScreen" 
+        options={{
+          header: () => (
+            <View style={{
+              height: 80,
+              backgroundColor: '#0f0f0f',
+              justifyContent: 'center',
+             
+            }}>
+              <Text style={{
+                color: 'white',
+                fontSize: 30,
+                fontWeight: 'bold',
+                textAlign: 'center'
+              }}>
+                Summary
+              </Text>
+            </View>
+          ),
+          headerShown: true,
+          contentStyle: {
+            backgroundColor: '#f0f0f0',
+          },
         }} 
       />
-      <Stack.Screen 
-        name="SummaryScreen" 
-        options={{
-          title: "Summary Screen",
-        }} 
-      />
+  
     </Stack>
+    </PersistentLayout>
   );
   
   

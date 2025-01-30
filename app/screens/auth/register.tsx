@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-nativ
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../../firebase';
 
 
 
@@ -20,7 +20,7 @@ export default function Register() {
   
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.replace('/Home');
+      router.replace('/screens/main/Home');
     } catch (error: any) {
       alert(error.message);
     }

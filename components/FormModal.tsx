@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'annually' | 'quarterly';
 
@@ -13,9 +14,10 @@ interface FormModalProps {
   amount: number;
   category: string;
   categories: string[];
-  type: 'Income' | 'Expense';
+  type: 'Income' | 'Expense' | 'Saving';
   onClose: () => void;
   onSave: () => void;
+  onDelete?: () => void;
   onChangeName: (name: string) => void;
   onChangeFrequency: (frequency: Frequency) => void;
   onChangeAmount: (amount: string) => void;
@@ -33,6 +35,7 @@ const FormModal: React.FC<FormModalProps> = ({
   type,
   onClose,
   onSave,
+  onDelete,
   onChangeName,
   onChangeFrequency,
   onChangeAmount,
@@ -100,21 +103,33 @@ const FormModal: React.FC<FormModalProps> = ({
           </View>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+            {isEditing && onDelete && (
+              <TouchableOpacity 
+                style={[styles.button, styles.deleteButton]}
+                onPress={onDelete}
+              >
+                <Icon name="trash" color="red" size={20} />
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
             
-            <TouchableOpacity 
-              style={[styles.button, styles.saveButton]}
-              onPress={onSave}
-            >
-              <Text style={styles.saveButtonText}>
-                {isEditing ? 'Update' : 'Save'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.rightButtons}>
+              <TouchableOpacity 
+                style={[styles.button, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.button, styles.saveButton]}
+                onPress={onSave}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isEditing ? 'Update' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -162,14 +177,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginTop: 20,
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
   },
   button: {
     padding: 10,
     borderRadius: 5,
-    flex: 1,
+    minWidth: 100,
+  },
+  deleteButton: {
+    backgroundColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   cancelButton: {
     backgroundColor: '#f2f2f2',
@@ -177,7 +206,6 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#007AFF',
-    marginLeft: 10,
   },
   cancelButtonText: {
     color: '#666',

@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-nativ
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../../firebase';
 
 
 export default function Login() {
@@ -13,7 +13,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/Home');
+      router.replace('/screens/main/Home');
     } catch (error: any) {
       alert(error.message);
     }
@@ -46,7 +46,7 @@ export default function Login() {
 
       <TouchableOpacity 
         style={styles.linkButton} 
-        onPress={() => router.push('/auth/register')}
+        onPress={() => router.push('/screens/auth/register')}
       >
         <Text style={styles.linkText}>Don't have an account? Register</Text>
       </TouchableOpacity>
