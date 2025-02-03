@@ -1,5 +1,5 @@
 // app/auth/login.tsx
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Image } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -13,7 +13,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/screens/main/Home');
+      router.replace('/screens/main/IncomeScreen');
     } catch (error: any) {
       alert(error.message);
     }
@@ -22,7 +22,7 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Budget Planner</Text>
-      
+     
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -59,24 +59,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+        backgroundColor: '#111827'
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
+    color: '#8B85F7',
   },
   input: {
+  
     height: 50,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 15,
+    backgroundColor: 'white',
+   
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4F46E5',
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',

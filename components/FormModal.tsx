@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TextInput, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
+
 
 type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'annually' | 'quarterly';
 
@@ -54,6 +54,14 @@ const FormModal: React.FC<FormModalProps> = ({
             <Text style={styles.modalTitle}>
               {isEditing ? `Edit ${type}` : `Add New ${type}`}
             </Text>
+            {isEditing && onDelete && (
+              <TouchableOpacity 
+                style={[styles.button, styles.deleteButton]}
+                onPress={onDelete}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
@@ -72,6 +80,8 @@ const FormModal: React.FC<FormModalProps> = ({
               style={styles.picker}
               selectedValue={category}
               onValueChange={onChangeCategory}
+              dropdownIconColor={'black'}
+              
             >
               {categories.map((cat) => (
                 <Picker.Item key={cat} label={cat} value={cat} />
@@ -90,6 +100,7 @@ const FormModal: React.FC<FormModalProps> = ({
           <View style={styles.pickerContainer}>
             <Text style={styles.pickerLabel}>Frequency</Text>
             <Picker
+              dropdownIconColor={'black'}
               style={styles.picker}
               selectedValue={frequency}
               onValueChange={(value) => onChangeFrequency(value as Frequency)}
@@ -103,23 +114,10 @@ const FormModal: React.FC<FormModalProps> = ({
           </View>
 
           <View style={styles.modalButtons}>
-            {isEditing && onDelete && (
-              <TouchableOpacity 
-                style={[styles.button, styles.deleteButton]}
-                onPress={onDelete}
-              >
-                <Icon name="trash" color="red" size={20} />
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            )}
+         
             
             <View style={styles.rightButtons}>
-              <TouchableOpacity 
-                style={[styles.button, styles.cancelButton]}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+             
               
               <TouchableOpacity 
                 style={[styles.button, styles.saveButton]}
@@ -129,6 +127,7 @@ const FormModal: React.FC<FormModalProps> = ({
                   {isEditing ? 'Update' : 'Save'}
                 </Text>
               </TouchableOpacity>
+           
             </View>
           </View>
         </View>
@@ -180,9 +179,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   rightButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
+    flexDirection: 'column',
+   width: "100%",
   },
   button: {
     padding: 10,
@@ -194,7 +192,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+ 
   },
   deleteButtonText: {
     color: 'white',
@@ -206,12 +204,9 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#007AFF',
+    width: "100%",
   },
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+ 
   saveButtonText: {
     color: '#fff',
     fontWeight: 'bold',
@@ -223,7 +218,7 @@ const styles = StyleSheet.create({
   pickerLabel: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 5,
+    marginBottom: 2,
   },
 });
 

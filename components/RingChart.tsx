@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, StyleSheet } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { ExpenseSource } from '@/types/interfaces';
 
@@ -119,12 +119,6 @@ const DonutChart: React.FC<DonutChartProps> = ({ income, expenses, savings, view
               ${savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
-          <View style={styles.totalItem}>
-            <Text style={styles.totalLabel}>{balance >= 0 ? 'Surplus' : 'Deficit'}</Text>
-            <Text style={[styles.totalAmount, { color: balance >= 0 ? '#4CAF50' : '#f44336' }]}>
-              ${Math.abs(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-          </View>
         </View>
       </View>
 
@@ -150,14 +144,16 @@ const DonutChart: React.FC<DonutChartProps> = ({ income, expenses, savings, view
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   mainContainer: {
-    width: '100%' as const,
+    width: '100%' ,
+  
+    
   },
   chartRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row' ,
+    alignItems: 'center' ,
+    justifyContent: 'space-between' ,
     marginBottom: 20,
   },
   totalsContainer: {
@@ -169,21 +165,23 @@ const styles = {
   totalLabel: {
     color: 'white',
     fontSize: 14,
-    fontWeight: '700' as const,
+    fontWeight: '700' ,
   },
   totalAmount: {
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontWeight: '700' ,
   },
   legendContainer: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
-    justifyContent: 'center' as const,
-    gap: 10,
+    flexDirection: 'row' ,
+    flexWrap: 'wrap' ,
+    justifyContent: 'space-between' ,
+    marginTop: 20,
   },
   legendItem: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row' ,
+    alignItems: 'center' ,
+    width: '48%', // This creates the 2-column layout
+    marginBottom: 10,
   },
   colorBox: {
     width: 12,
@@ -194,8 +192,8 @@ const styles = {
   legendText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: '400' as const,
+    fontWeight: '400' ,
   }
-};
+});
 
 export default DonutChart;

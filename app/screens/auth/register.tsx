@@ -20,7 +20,7 @@ export default function Register() {
   
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.replace('/screens/main/Home');
+      router.replace('/screens/main/IncomeScreen');
     } catch (error: any) {
       alert(error.message);
     }
@@ -74,13 +74,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+     backgroundColor: '#111827'
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
+    color: '#8B85F7',
   },
   input: {
     height: 50,
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 15,
+    backgroundColor: 'white',
   },
   button: {
     backgroundColor: '#007AFF',

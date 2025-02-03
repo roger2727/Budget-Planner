@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet,  ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth } from '../../firebase';
@@ -80,127 +80,150 @@ const SummaryScreen = () => {
     }
   };
 
-  const calculateIncome = (frequency: ViewMode): number => {
+  const calculateIncome = (frequency: ViewMode, incomeSources: IncomeSource[]): number => {
     return incomeSources.reduce((total, source) => {
+      // First convert all amounts to annual
+      let annualAmount = source.amount;
+      switch (source.frequency) {
+        case 'weekly':
+          annualAmount *= 52;
+          break;
+        case 'fortnightly':
+          annualAmount *= 26;
+          break;
+        case 'monthly':
+          annualAmount *= 12;
+          break;
+        case 'annually':
+          // Already annual, no conversion needed
+          break;
+      }
+  
+      // Then convert annual amount to requested frequency
       switch (frequency) {
         case 'weekly':
-          return total + (source.amount / (source.frequency === 'weekly' ? 1 : 
-            source.frequency === 'fortnightly' ? 2 : 
-            source.frequency === 'monthly' ? 4 : 52));
+          return total + (annualAmount / 52);
         case 'monthly':
-          return total + (source.amount / (source.frequency === 'monthly' ? 1 : 
-            source.frequency === 'fortnightly' ? 0.5 : 
-            source.frequency === 'annually' ? 12 : 4));
-        default: // annual
-          return total + (source.amount * (source.frequency === 'annually' ? 1 : 
-            source.frequency === 'fortnightly' ? 26 : 
-            source.frequency === 'monthly' ? 12 : 52));
+          return total + (annualAmount / 12);
+        case 'annual':
+          return total + annualAmount;
       }
     }, 0);
   };
 
-  const calculateExpenses = (frequency: ViewMode): number => {
+  const calculateExpenses = (frequency: ViewMode, expenseSources: ExpenseSource[]): number => {
     return expenseSources.reduce((total, source) => {
+      // First convert all amounts to annual
+      let annualAmount = source.amount;
+      switch (source.frequency) {
+        case 'weekly':
+          annualAmount *= 52;
+          break;
+        case 'fortnightly':
+          annualAmount *= 26;
+          break;
+        case 'monthly':
+          annualAmount *= 12;
+          break;
+        case 'annually':
+          // Already annual, no conversion needed
+          break;
+      }
+  
+      // Then convert annual amount to requested frequency
       switch (frequency) {
         case 'weekly':
-          return total + (source.amount / (source.frequency === 'weekly' ? 1 : 
-            source.frequency === 'fortnightly' ? 2 : 
-            source.frequency === 'monthly' ? 4 : 52));
+          return total + (annualAmount / 52);
         case 'monthly':
-          return total + (source.amount / (source.frequency === 'monthly' ? 1 : 
-            source.frequency === 'fortnightly' ? 0.5 : 
-            source.frequency === 'annually' ? 12 : 4));
-        default: // annual
-          return total + (source.amount * (source.frequency === 'annually' ? 1 : 
-            source.frequency === 'fortnightly' ? 26 : 
-            source.frequency === 'monthly' ? 12 : 52));
+          return total + (annualAmount / 12);
+        case 'annual':
+          return total + annualAmount;
       }
     }, 0);
   };
-
-  const calculateSavings = (frequency: ViewMode): number => {
+  
+  const calculateSavings = (frequency: ViewMode, savingSources: SavingSource[]): number => {
     return savingSources.reduce((total, source) => {
+      // First convert all amounts to annual
+      let annualAmount = source.amount;
+      switch (source.frequency) {
+        case 'weekly':
+          annualAmount *= 52;
+          break;
+        case 'fortnightly':
+          annualAmount *= 26;
+          break;
+        case 'monthly':
+          annualAmount *= 12;
+          break;
+        case 'annually':
+          // Already annual, no conversion needed
+          break;
+      }
+  
+      // Then convert annual amount to requested frequency
       switch (frequency) {
         case 'weekly':
-          return total + (source.amount / (source.frequency === 'weekly' ? 1 : 
-            source.frequency === 'fortnightly' ? 2 : 
-            source.frequency === 'monthly' ? 4 : 52));
+          return total + (annualAmount / 52);
         case 'monthly':
-          return total + (source.amount / (source.frequency === 'monthly' ? 1 : 
-            source.frequency === 'fortnightly' ? 0.5 : 
-            source.frequency === 'annually' ? 12 : 4));
-        default: // annual
-          return total + (source.amount * (source.frequency === 'annually' ? 1 : 
-            source.frequency === 'fortnightly' ? 26 : 
-            source.frequency === 'monthly' ? 12 : 52));
+          return total + (annualAmount / 12);
+        case 'annual':
+          return total + annualAmount;
       }
     }, 0);
   };
-
-
-useEffect(() => {
-  const fetchExpenses = async () => {
-    if (!userId) return;
-    
-    const q = query(
-      collection(db, 'expenseSources'),
-      where('userId', '==', userId)
-    );
-    
-    const snapshot = await getDocs(q);
-    setExpenseSources(snapshot.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data() 
-    }) as ExpenseSource));
-  };
-
-  fetchExpenses();
-}, [userId]);
-
-  const totalIncome = calculateIncome(viewMode);
-  const totalSavings = calculateSavings(viewMode);
-
+  const totalIncome = calculateIncome(viewMode, incomeSources);
+  const totalExpenses = calculateExpenses(viewMode, expenseSources);
+  const totalSavings = calculateSavings(viewMode, savingSources);
+  const balance = totalIncome - totalExpenses - totalSavings;
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.summaryCard}>
-        <View style={styles.pickerContainer}>
-          <Picker
-            style={styles.picker}
-            selectedValue={viewMode}
-            onValueChange={(value: ViewMode) => setViewMode(value)}
-          >
-            <Picker.Item label="Weekly View" value="weekly" />
-            <Picker.Item label="Monthly View" value="monthly" />
-            <Picker.Item label="Annual View" value="annual" />
-          </Picker>
+          <View style={styles.pickerContainer}>
+            <Picker
+              dropdownIconColor='white'
+              style={styles.picker}
+              selectedValue={viewMode}
+              onValueChange={(value: ViewMode) => setViewMode(value)}
+              
+            >
+              <Picker.Item label="Weekly View" value="weekly" />
+              <Picker.Item label="Monthly View" value="monthly" />
+              <Picker.Item label="Annual View" value="annual" />
+            </Picker>
+          </View>
+
+          {/* Surplus/Deficit Card */}
+          <View style={[
+            styles.balanceCard,
+            { backgroundColor: balance >= 0 ? '#4CAF50' : '#f44336' }
+          ]}>
+            <Text style={styles.balanceText}>
+              {balance >= 0 ? 'Surplus' : 'Deficit'}
+            </Text>
+            <Text style={styles.balanceAmount}>
+              ${Math.abs(balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+
+          {/* Donut Chart */}
+          <View style={styles.chartContainer}>
+            <DonutChart 
+              income={totalIncome}
+              expenses={expenseSources}
+              savings={totalSavings}
+              viewMode={viewMode}
+            />
+          </View>
         </View>
-
-      
- 
-      <View style={styles.chartContainer}>
-      <View style={styles.chartContainer}>
-      <DonutChart 
-  income={totalIncome}
-  expenses={expenseSources}
-  savings={totalSavings}
-  viewMode={viewMode}
-/>
-</View>
-</View>
-
-</View>
-</ScrollView>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  chartContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
   container: {
     flex: 1,
     backgroundColor: '#111827',
@@ -211,54 +234,38 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  summaryCard: {
+    backgroundColor: '#1C202F',
+    borderRadius: 10,
+    padding: 20,
   },
   pickerContainer: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#4F46E5',
     borderRadius: 10,
     marginBottom: 20,
+   
   },
   picker: {
+    color: 'white',
     marginBottom: 10,
   },
-  summaryCard: {
-    backgroundColor: '#1C202F' ,
+  chartContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  balanceCard: {
     borderRadius: 10,
     padding: 20,
-  },
-  summaryRow: {
+    alignItems: 'center',
     marginBottom: 20,
   },
- 
-  iconContainer: {
-    marginRight: 10,
-  },
-  summaryLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  summaryAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  balanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  balanceLabel: {
-    flex: 1,
+  balanceText: {
+    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
   balanceAmount: {
+    color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
   },

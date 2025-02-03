@@ -1,9 +1,9 @@
-// app/config/firebase.js
+// app/firebase.js
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuth} from 'firebase/auth';
 
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+import { getStorage } from 'firebase/storage';
+
 const firebaseConfig = {
   apiKey: "AIzaSyCTxeJ1DZFX9PE3KelaJshhx7HWFO8nH2k",
   authDomain: "budget-planner-cb29a.firebaseapp.com",
@@ -14,19 +14,14 @@ const firebaseConfig = {
   measurementId: "G-CQKS1X86WS"
 };
 
-// Debug log
-console.log('Initializing Firebase with config:', firebaseConfig);
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with AsyncStorage persistence
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Initialize Auth
+const auth = getAuth(app);
 
-// Debug log
-console.log('Firebase initialized, auth:', auth ? 'success' : 'failed');
+// Initialize Storage
+const storage = getStorage(app);
 
-export { auth };
+export { auth, storage };
 export default app;
